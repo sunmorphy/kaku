@@ -64,12 +64,12 @@ export default function ContactForm() {
 
     try {
       const result = await submitContactForm(formData);
-      
+
       setStatus({
         type: 'success',
         message: result.message || 'Message sent successfully!'
       });
-      
+
       // Reset form
       setFormData({
         name: '',
@@ -98,7 +98,7 @@ export default function ContactForm() {
   };
 
   return (
-    <div className="bg-gray-50 rounded-lg">
+    <div className="bg-white rounded-lg">
       <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
         <i className="ph ph-paper-plane-tilt text-2xl text-primary"></i>
         Send a Message
@@ -196,9 +196,9 @@ export default function ContactForm() {
         {/* Status Messages */}
         {status.message && (
           <div className={`p-4 rounded-lg flex items-center gap-2 ${status.type === 'success' ? 'bg-green-50 text-green-700' :
-              status.type === 'error' ? 'bg-red-50 text-red-700' :
-                status.type === 'loading' ? 'bg-blue-50 text-blue-700' :
-                  ''
+            status.type === 'error' ? 'bg-red-50 text-red-700' :
+              status.type === 'loading' ? 'bg-blue-50 text-blue-700' :
+                ''
             }`}>
             {status.type === 'success' && <i className="ph ph-check-circle text-xl"></i>}
             {status.type === 'error' && <i className="ph ph-x-circle text-xl"></i>}
