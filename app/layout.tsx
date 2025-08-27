@@ -6,8 +6,8 @@ import Header from './components/Header';
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Kaku - Portfolio & Creative Works",
-  description: "Portfolio and creative works showcase - Discover projects, artworks, and professional journey",
+  title: "Kaku",
+  description: "Kaku portfolio and journey",
 };
 
 export default function RootLayout({
