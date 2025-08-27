@@ -3,115 +3,68 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Image } from '@imagekit/next';
 import ScratchItem from '../components/ScratchItem';
+import { getArtworks, type Artwork } from '../lib/api';
+import LoadingAnimation from '../components/LoadingAnimation';
+import { devLog } from '../utils/utils';
 
 interface ScratchItemData {
-  id: string;
+  id: number;
   title: string;
-  category: string;
+  categories: string[];
   image: string;
   description: string;
 }
-
-const scratchData: ScratchItemData[] = [
-  {
-    id: 'sketch-1',
-    title: 'Morning Sketch',
-    category: 'Sketches',
-    image: '/kaku/sketch-1.png',
-    description: 'Quick morning character sketch'
-  },
-  {
-    id: 'study-1',
-    title: 'Light Study',
-    category: 'Studies',
-    image: '/kaku/study-1.png',
-    description: 'Practicing light and shadow'
-  },
-  {
-    id: 'doodle-1',
-    title: 'Coffee Doodle',
-    category: 'Doodles',
-    image: '/kaku/doodle-1.png',
-    description: 'Doodle while drinking coffee'
-  },
-  {
-    id: 'experiment-1',
-    title: 'Color Experiment',
-    category: 'Experiments',
-    image: '/kaku/experiment-1.png',
-    description: 'Experimenting with new color palettes'
-  },
-  {
-    id: 'sketch-2',
-    title: 'Character Expression',
-    category: 'Sketches',
-    image: '/kaku/sketch-2.png',
-    description: 'Exploring different facial expressions'
-  },
-  {
-    id: 'study-2',
-    title: 'Anatomy Study',
-    category: 'Studies',
-    image: '/kaku/study-2.png',
-    description: 'Hand anatomy practice'
-  },
-  {
-    id: 'doodle-2',
-    title: 'Random Creatures',
-    category: 'Doodles',
-    image: '/kaku/doodle-2.png',
-    description: 'Random creature doodles'
-  },
-  {
-    id: 'experiment-2',
-    title: 'Style Test',
-    category: 'Experiments',
-    image: '/kaku/experiment-2.png',
-    description: 'Testing different art styles'
-  },
-  {
-    id: 'sketch-3',
-    title: 'Environment Sketch',
-    category: 'Sketches',
-    image: '/kaku/sketch-3.png',
-    description: 'Quick environment concept'
-  },
-  {
-    id: 'study-3',
-    title: 'Color Theory',
-    category: 'Studies',
-    image: '/kaku/study-3.png',
-    description: 'Color harmony studies'
-  },
-  {
-    id: 'doodle-3',
-    title: 'Pattern Play',
-    category: 'Doodles',
-    image: '/kaku/doodle-3.png',
-    description: 'Playing with patterns and shapes'
-  },
-  {
-    id: 'experiment-3',
-    title: 'Digital Texture',
-    category: 'Experiments',
-    image: '/kaku/experiment-3.png',
-    description: 'Experimenting with digital textures'
-  }
-];
-
-const categories = ['All', ...Array.from(new Set(scratchData.map(item => item.category)))];
 
 export default function Scratch() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [scratchData, setScratchData] = useState<ScratchItemData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const artworks = await getArtworks();
+        const scratchArtworks = artworks.data.filter((artwork: Artwork) =>
+          artwork.type === 'scratch'
+        );
+
+        const scratchItems: ScratchItemData[] = scratchArtworks.map((artwork: Artwork) => ({
+          id: artwork.id,
+          title: artwork.title,
+          categories: artwork.artwork_categories?.map(cat => cat.category.name) || ['Uncategorized'],
+          image: artwork.image_path,
+          description: artwork.description || ''
+        }));
+
+        setScratchData(scratchItems);
+      } catch (err) {
+        setError('Failed to load scratch items. Please try again later.');
+        devLog('Error fetching scratch data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  const categories = useMemo(() => {
+    const allCategories = scratchData.flatMap(item => item.categories);
+    return ['All', ...Array.from(new Set(allCategories))];
+  }, [scratchData]);
 
   const filteredItems = useMemo(() => {
     return scratchData.filter(item => {
-      const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+      const matchesCategory = selectedCategory === 'All' || item.categories.includes(selectedCategory);
       return matchesCategory;
     });
-  }, [selectedCategory]);
+  }, [scratchData, selectedCategory]);
 
   const openDialog = (index: number) => {
     setSelectedImageIndex(index);
@@ -125,18 +78,18 @@ export default function Scratch() {
 
   const navigateImage = (direction: 'prev' | 'next') => {
     if (selectedImageIndex === null) return;
-    
-    const newIndex = direction === 'prev' 
+
+    const newIndex = direction === 'prev'
       ? (selectedImageIndex - 1 + filteredItems.length) % filteredItems.length
       : (selectedImageIndex + 1) % filteredItems.length;
-    
+
     setSelectedImageIndex(newIndex);
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isDialogOpen) return;
-      
+
       switch (e.key) {
         case 'Escape':
           closeDialog();
@@ -154,24 +107,45 @@ export default function Scratch() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isDialogOpen, selectedImageIndex, filteredItems.length]);
 
+  if (loading) {
+    return (
+      <LoadingAnimation size={256} />
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen p-8 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-8 animate-fade-in">
       <div className="mx-auto lg:w-3/5 w-full">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-4">Scratch</h1>
-          
+
           {/* Category Filter */}
           <div className="flex flex-wrap gap-3 mb-8">
             {categories.map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                  selectedCategory === category
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+                className={`px-4 py-2 rounded-full text-sm transition-colors ${selectedCategory === category
+                  ? 'bg-primary text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
               >
                 {category}
               </button>
@@ -184,9 +158,9 @@ export default function Scratch() {
           {filteredItems.map((item, index) => (
             <ScratchItem
               key={item.id}
-              id={item.id}
+              id={item.id.toString()}
               title={item.title}
-              category={item.category}
+              categories={item.categories}
               image={item.image}
               description={item.description}
               onClick={() => openDialog(index)}
@@ -194,7 +168,7 @@ export default function Scratch() {
           ))}
         </div>
 
-        {filteredItems.length === 0 && (
+        {filteredItems.length === 0 && !loading && (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">No items found in this category.</p>
           </div>
@@ -203,67 +177,78 @@ export default function Scratch() {
 
       {/* Image Preview Dialog */}
       {isDialogOpen && selectedImageIndex !== null && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-          <div className="relative max-w-4xl max-h-full w-full h-full flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closeDialog}>
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full h-[95vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             {/* Close Button */}
             <button
               onClick={closeDialog}
-              className="absolute top-4 right-4 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-2 transition-colors"
+              className="absolute top-4 right-4 z-50 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full p-2 transition-colors shadow-lg"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            {/* Navigation Buttons */}
-            {filteredItems.length > 1 && (
-              <>
-                <button
-                  onClick={() => navigateImage('prev')}
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-3 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => navigateImage('next')}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-3 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+            {/* Image */}
+            <div className="w-full flex-1 bg-gray-50 flex items-center justify-center">
+              <Image
+                urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
+                src={filteredItems[selectedImageIndex].image}
+                alt={filteredItems[selectedImageIndex].title}
+                width={600}
+                height={400}
+                className="object-contain w-full h-full"
+              />
+            </div>
+
+            {/* Content */}
+            <div className="p-6 flex-shrink-0">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex-1 space-y-4">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{filteredItems[selectedImageIndex].title}</h3>
+                  {filteredItems[selectedImageIndex].description && (
+                    <p className="text-gray-600 leading-relaxed">{filteredItems[selectedImageIndex].description}</p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {filteredItems[selectedImageIndex].categories.map((category, index) => (
+                      <div key={index} className="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                        {category}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation */}
+              {filteredItems.length > 1 && (
+                <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => navigateImage('prev')}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Previous
                   </button>
-              </>
-            )}
 
-            {/* Main Image */}
-            <div className="relative w-full h-full flex items-center justify-center">
-              <div className="relative max-w-full max-h-full">
-                <Image
-                  urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
-                  src={filteredItems[selectedImageIndex].image}
-                  alt={filteredItems[selectedImageIndex].title}
-                  width={800}
-                  height={800}
-                  className="object-contain max-w-full max-h-full"
-                />
-              </div>
+                  <span className="text-sm text-gray-500">
+                    {selectedImageIndex + 1} of {filteredItems.length}
+                  </span>
+
+                  <button
+                    onClick={() => navigateImage('next')}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                  >
+                    Next
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Image Info */}
-            <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-50 text-white p-4 rounded-lg">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-xl font-semibold mb-1">{filteredItems[selectedImageIndex].title}</h3>
-                  <p className="text-gray-300 text-sm mb-1">{filteredItems[selectedImageIndex].category}</p>
-                  <p className="text-gray-200 text-sm">{filteredItems[selectedImageIndex].description}</p>
-                </div>
-                <div className="text-right text-sm text-gray-300">
-                  {selectedImageIndex + 1} / {filteredItems.length}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}

@@ -1,112 +1,110 @@
-import { Image } from '@imagekit/next';
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-
-interface PortfolioItem {
-  id: string;
-  title: string;
-  category: string;
-  type: 'project' | 'artwork';
-  image: string;
-  description: string;
-  detailedDescription: string;
-  techniques: string[];
-  year: string;
-  client?: string;
-  duration?: string;
-}
-
-const portfolioData: PortfolioItem[] = [
-  {
-    id: 'character-design-1',
-    title: 'Fantasy Character Design',
-    category: 'Character Design',
-    type: 'artwork',
-    image: '/kaku/character-1.png',
-    description: 'Original fantasy character design with detailed armor and weapon concepts.',
-    detailedDescription: 'This fantasy character design explores the intersection of traditional armor design with magical elements. The character features intricate plate armor with mystical engravings and a weapon that channels elemental powers. The design process involved extensive research into medieval armor construction while incorporating fantastical elements to create a believable yet magical warrior.',
-    techniques: ['Digital Painting', 'Concept Sketching', 'Color Theory', 'Anatomy Study'],
-    year: '2024',
-    duration: '2 weeks'
-  },
-  {
-    id: 'illustration-project-1',
-    title: 'Book Cover Illustration',
-    category: 'Illustration',
-    type: 'project',
-    image: '/kaku/book-cover-1.png',
-    description: 'Commercial book cover illustration for fantasy novel.',
-    detailedDescription: 'Created for an upcoming fantasy novel, this book cover illustration captures the essence of the story while appealing to the target audience. The composition focuses on dramatic lighting and atmospheric elements to convey the mysterious and adventurous tone of the book. Close collaboration with the publisher ensured the design met commercial requirements while maintaining artistic integrity.',
-    techniques: ['Digital Illustration', 'Composition Design', 'Typography Integration', 'Market Research'],
-    year: '2024',
-    client: 'Mystical Tales Publishing',
-    duration: '3 weeks'
-  },
-  {
-    id: 'concept-art-1',
-    title: 'Environment Concept',
-    category: 'Concept Art',
-    type: 'artwork',
-    image: '/kaku/environment-1.png',
-    description: 'Fantasy landscape concept art with mystical elements.',
-    detailedDescription: 'An expansive fantasy landscape that serves as a foundation for world-building. This concept art explores different lighting conditions, atmospheric perspective, and the relationship between natural and magical elements in the environment. The piece demonstrates various techniques for creating depth and mood in digital landscapes.',
-    techniques: ['Environment Design', 'Atmospheric Perspective', 'Digital Matte Painting', 'World Building'],
-    year: '2024',
-    duration: '1 week'
-  },
-  {
-    id: 'character-design-2',
-    title: 'Modern Character Study',
-    category: 'Character Design',
-    type: 'artwork',
-    image: '/kaku/character-2.png',
-    description: 'Contemporary character design with fashion elements.',
-    detailedDescription: 'A modern character study that blends contemporary fashion with character design principles. This piece explores how clothing choices, posture, and styling can communicate personality and background. The design incorporates current fashion trends while maintaining timeless character design fundamentals.',
-    techniques: ['Fashion Illustration', 'Character Development', 'Style Studies', 'Color Harmony'],
-    year: '2024',
-    duration: '1 week'
-  },
-  {
-    id: 'game-assets-1',
-    title: 'Mobile Game Assets',
-    category: 'Game Art',
-    type: 'project',
-    image: '/kaku/game-assets-1.png',
-    description: 'UI and character assets for mobile puzzle game.',
-    detailedDescription: 'Complete asset package for a mobile puzzle game, including UI elements, character designs, and environmental assets. The art style was developed to be colorful and appealing while maintaining clarity at small screen sizes. All assets were optimized for mobile performance while preserving visual quality.',
-    techniques: ['UI Design', 'Mobile Optimization', 'Asset Creation', 'Style Guide Development'],
-    year: '2023',
-    client: 'Puzzle Games Studio',
-    duration: '6 weeks'
-  },
-  {
-    id: 'illustration-2',
-    title: 'Portrait Study',
-    category: 'Illustration',
-    type: 'artwork',
-    image: '/kaku/portrait-1.png',
-    description: 'Digital portrait with focus on lighting and texture.',
-    detailedDescription: 'A detailed digital portrait study focusing on realistic lighting and skin texture. This piece explores advanced digital painting techniques including subsurface scattering, realistic hair rendering, and complex lighting setups. The study serves as both a technical exercise and an artistic expression.',
-    techniques: ['Digital Portraiture', 'Lighting Studies', 'Texture Painting', 'Anatomy'],
-    year: '2024',
-    duration: '4 days'
-  }
-];
+import { getProjects, getArtworks, type Project, type Artwork } from '../../lib/api';
+import LoadingAnimation from '../../components/LoadingAnimation';
+import { devLog } from '@/app/utils/utils';
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ type?: string }>;
 }
 
-export default async function PortfolioDetail({ params }: Props) {
-  const { id } = await params;
-  const item = portfolioData.find(item => item.id === id);
+export default function PortfolioDetail({ params, searchParams }: Props) {
+  const [item, setItem] = useState<(Project & { type: 'project' }) | (Artwork & { type: 'artwork' }) | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
+  const [resolvedSearchParams, setResolvedSearchParams] = useState<{ type?: string } | null>(null);
 
-  if (!item) {
+  useEffect(() => {
+    async function resolveParams() {
+      const resolved = await params;
+      const resolvedSearch = await searchParams;
+      setResolvedParams(resolved);
+      setResolvedSearchParams(resolvedSearch || {});
+    }
+    resolveParams();
+  }, [params, searchParams]);
+
+  useEffect(() => {
+    if (!resolvedParams || !resolvedSearchParams) return;
+
+    async function fetchData() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (resolvedParams == null || resolvedSearchParams == null) {
+          return;
+        }
+
+        const id = parseInt(resolvedParams.id);
+        const type = resolvedSearchParams.type;
+
+        if (type === 'project') {
+          // Fetch only projects
+          const projects = await getProjects();
+          const project = projects.data.find(p => p.id === id);
+          if (project) {
+            setItem({ ...project, type: 'project' });
+            return;
+          }
+        } else if (type === 'artwork') {
+          // Fetch only artworks
+          const artworks = await getArtworks();
+          const artwork = artworks.data.find(a => a.id === id && a.type === 'portfolio');
+          if (artwork) {
+            setItem({ ...artwork, type: 'artwork' });
+            return;
+          }
+        } else {
+          // Fallback: search both if type not specified
+          const [projects, artworks] = await Promise.all([
+            getProjects(),
+            getArtworks()
+          ]);
+
+          const project = projects.data.find(p => p.id === id);
+          if (project) {
+            setItem({ ...project, type: 'project' });
+            return;
+          }
+
+          const artwork = artworks.data.find(a => a.id === id && a.type === 'portfolio');
+          if (artwork) {
+            setItem({ ...artwork, type: 'artwork' });
+            return;
+          }
+        }
+
+        // Not found
+        setError('Item not found');
+      } catch (err) {
+        setError('Failed to load item details');
+        devLog('Error fetching item details:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [resolvedParams, resolvedSearchParams]);
+
+  if (loading) {
+    return (
+      <LoadingAnimation size={256} />
+    );
+  }
+
+  if (error || !item) {
     notFound();
   }
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-8 animate-fade-in">
       <div className="mx-auto lg:w-3/5 w-full">
         {/* Back Button */}
         <Link href="/portfolio" className="inline-flex items-center text-primary hover:underline mb-8">
@@ -116,55 +114,81 @@ export default async function PortfolioDetail({ params }: Props) {
           Back to Portfolio
         </Link>
 
-        {/* Main Image */}
-        <div className="relative w-full h-96 mb-8 rounded-lg overflow-hidden bg-gray-100">
-          <Image
-            urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
-            src={item.image}
-            alt={item.title}
-            fill
-            className="object-cover"
-          />
-        </div>
-
         {/* Content */}
-        <div className="space-y-8">
+        <div className="space-y-8 mb-8">
           {/* Title and Meta */}
           <div>
             <div className="flex justify-between items-start mb-4">
-              <h1 className="text-4xl font-bold">{item.title}</h1>
-              <span className="text-sm px-3 py-1 bg-primary text-white rounded-full">
-                {item.type}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-4 text-gray-600 mb-4">
-              <span><strong>Category:</strong> {item.category}</span>
-              <span><strong>Year:</strong> {item.year}</span>
-              {item.duration && <span><strong>Duration:</strong> {item.duration}</span>}
-              {item.client && <span><strong>Client:</strong> {item.client}</span>}
-            </div>
-          </div>
+              <div className='flex flex-col space-y-4'>
+                <h1 className="text-4xl font-bold">{item.title}</h1>
+                {/* Description */}
+                {item.description && (
+                  <div>
+                    <p className="text-gray-700 leading-relaxed">{item.description}</p>
+                  </div>
+                )}
 
-          {/* Description */}
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">About This {item.type === 'project' ? 'Project' : 'Artwork'}</h2>
-            <p className="text-gray-700 leading-relaxed">{item.detailedDescription}</p>
-          </div>
-
-          {/* Techniques */}
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">Techniques & Skills</h2>
-            <div className="flex flex-wrap gap-2">
-              {item.techniques.map((technique) => (
-                <span
-                  key={technique}
-                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
-                >
-                  {technique}
+                {/* Categories */}
+                <div className="flex flex-wrap gap-2">
+                  {item.type === 'project'
+                    ? (item as Project & { type: 'project' }).project_categories?.map((cat, index) => (
+                      <span
+                        key={`project-cat-${cat.category.id || index}`}
+                        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                      >
+                        {cat.category.name}
+                      </span>
+                    ))
+                    : (item as Artwork & { type: 'artwork' }).artwork_categories?.map((cat, index) => (
+                      <span
+                        key={`artwork-cat-${cat.category.id || index}`}
+                        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                      >
+                        {cat.category.name}
+                      </span>
+                    ))
+                  }
+                </div>
+              </div>
+              <div className='flex flex-col items-end'>
+                <div className="flex flex-wrap gap-4 text-gray-600 mb-4">
+                  <span>{new Date(item.updated_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}</span>
+                </div>
+                <span className="text-sm px-3 py-1 bg-primary text-white rounded-full">
+                  {item.type}
                 </span>
-              ))}
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* All Images */}
+        <div className="space-y-8 mt-24">
+          {item.type === 'project' ? (
+            // Show all project images
+            (item as Project & { type: 'project' }).batch_image_path?.map((imagePath, index) => (
+              <div key={index} className="w-full rounded-lg overflow-hidden bg-gray-100">
+                <img
+                  src={imagePath}
+                  alt={`${item.title} - Image ${index + 1}`}
+                  className="w-full h-auto object-contain"
+                />
+              </div>
+            ))
+          ) : (
+            // Show single artwork image
+            <div className="w-full rounded-lg overflow-hidden bg-gray-100">
+              <img
+                src={(item as Artwork & { type: 'artwork' }).image_path}
+                alt={item.title}
+                className="w-full h-auto object-contain"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

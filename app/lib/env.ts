@@ -2,33 +2,13 @@
 // This file centralizes environment variable access and provides type safety
 
 export const env = {
-  // Next.js Configuration
-  nextAuthUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000',
-  
   // ImageKit Configuration
   imageKit: {
-    urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/4o6binhtw',
-  },
-  
-  // Email Configuration
-  email: {
-    from: process.env.EMAIL_FROM || 'noreply@aakushigoto.art',
-    smtp: {
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      user: process.env.SMTP_USER,
-      password: process.env.SMTP_PASSWORD,
-    },
+    urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT!,
   },
   
   // App Configuration
-  nodeEnv: process.env.NODE_ENV || 'development',
-  appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-  
-  // Helper functions
-  isDevelopment: process.env.NODE_ENV === 'development',
-  isProduction: process.env.NODE_ENV === 'production',
-  isTest: process.env.NODE_ENV === 'test',
+  nodeEnv: process.env.NODE_ENV || 'development'
 } as const;
 
 // Type-safe environment variable getter with validation

@@ -1,84 +1,109 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import PortfolioItem from '../components/PortfolioItem';
+import { getProjects, getArtworks, type Project, type Artwork } from '../lib/api';
+import LoadingAnimation from '../components/LoadingAnimation';
+import { devLog } from '../utils/utils';
 
 interface PortfolioItemData {
-  id: string;
+  id: number;
   title: string;
-  category: string;
+  categories: string[];
   type: 'project' | 'artwork';
   image: string;
-  description: string;
+  images?: string[];
 }
-
-const portfolioData: PortfolioItemData[] = [
-  {
-    id: 'character-design-1',
-    title: 'Fantasy Character Design',
-    category: 'Character Design',
-    type: 'artwork',
-    image: '/kaku/character-1.png',
-    description: 'Original fantasy character design with detailed armor and weapon concepts.'
-  },
-  {
-    id: 'illustration-project-1',
-    title: 'Book Cover Illustration',
-    category: 'Illustration',
-    type: 'project',
-    image: '/kaku/book-cover-1.png',
-    description: 'Commercial book cover illustration for fantasy novel.'
-  },
-  {
-    id: 'concept-art-1',
-    title: 'Environment Concept',
-    category: 'Concept Art',
-    type: 'artwork',
-    image: '/kaku/environment-1.png',
-    description: 'Fantasy landscape concept art with mystical elements.'
-  },
-  {
-    id: 'character-design-2',
-    title: 'Modern Character Study',
-    category: 'Character Design',
-    type: 'artwork',
-    image: '/kaku/character-2.png',
-    description: 'Contemporary character design with fashion elements.'
-  },
-  {
-    id: 'game-assets-1',
-    title: 'Mobile Game Assets',
-    category: 'Game Art',
-    type: 'project',
-    image: '/kaku/game-assets-1.png',
-    description: 'UI and character assets for mobile puzzle game.'
-  },
-  {
-    id: 'illustration-2',
-    title: 'Portrait Study',
-    category: 'Illustration',
-    type: 'artwork',
-    image: '/kaku/portrait-1.png',
-    description: 'Digital portrait with focus on lighting and texture.'
-  }
-];
-
-const categories = ['All', ...Array.from(new Set(portfolioData.map(item => item.category)))];
 
 export default function Portfolio() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [portfolioData, setPortfolioData] = useState<PortfolioItemData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [projects, artworks] = await Promise.all([
+          getProjects(),
+          getArtworks()
+        ]);
+
+        const portfolioArtworks = artworks.data.filter((artwork: Artwork) =>
+          artwork.type === 'portfolio'
+        );
+
+        const combinedData: PortfolioItemData[] = [
+          ...projects.data.map((project: Project) => ({
+            id: project.id,
+            title: project.title,
+            categories: project.project_categories?.map(cat => cat.category.name) || ['Uncategorized'],
+            type: 'project' as const,
+            image: project.batch_image_path?.[0] || '',
+            images: project.batch_image_path || []
+          })),
+          ...portfolioArtworks.map((artwork: Artwork) => ({
+            id: artwork.id,
+            title: artwork.title,
+            categories: artwork.artwork_categories?.map(cat => cat.category.name) || ['Uncategorized'],
+            type: 'artwork' as const,
+            image: artwork.image_path
+          }))
+        ];
+
+        setPortfolioData(combinedData);
+      } catch (err) {
+        setError('Failed to load portfolio data. Please try again later.');
+        devLog('Error fetching portfolio data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  const categories = useMemo(() => {
+    const allCategories = portfolioData.flatMap(item => item.categories);
+    return ['All', ...Array.from(new Set(allCategories))];
+  }, [portfolioData]);
 
   const filteredItems = useMemo(() => {
     return portfolioData.filter(item => {
-      const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+      const matchesCategory = selectedCategory === 'All' || item.categories.includes(selectedCategory);
       const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchTerm]);
+  }, [portfolioData, selectedCategory, searchTerm]);
+
+  if (loading) {
+    return (
+      <LoadingAnimation size={256} />
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen p-8 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-8 animate-fade-in">
       <div className="mx-auto lg:w-3/5 w-full">
         {/* Header */}
         <div className="mb-8">
@@ -113,19 +138,21 @@ export default function Portfolio() {
         </div>
 
         {/* Portfolio Grid */}
-        {filteredItems.map((item) => (
-          <PortfolioItem
-            key={item.id}
-            id={item.id}
-            title={item.title}
-            category={item.category}
-            type={item.type}
-            image={item.image}
-            description={item.description}
-          />
-        ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-12">
+          {filteredItems.map((item) => (
+            <PortfolioItem
+              key={`${item.type}-${item.id}`}
+              id={item.id.toString()}
+              title={item.title}
+              categories={item.categories}
+              type={item.type}
+              image={item.image}
+              images={item.images}
+            />
+          ))}
+        </div>
 
-        {filteredItems.length === 0 && (
+        {filteredItems.length === 0 && !loading && (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">No items found matching your criteria.</p>
           </div>

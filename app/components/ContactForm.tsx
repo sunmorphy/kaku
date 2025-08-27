@@ -1,13 +1,7 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-
-interface FormData {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-}
+import { submitContactForm, ApiError, type ContactFormData } from '../lib/api';
 
 interface FormStatus {
   type: 'idle' | 'loading' | 'success' | 'error';
@@ -15,11 +9,12 @@ interface FormStatus {
 }
 
 export default function ContactForm() {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<ContactFormData>({
     name: '',
     email: '',
     subject: '',
-    message: ''
+    message: '',
+    honeypot: ''
   });
 
   const [status, setStatus] = useState<FormStatus>({
@@ -52,50 +47,49 @@ export default function ContactForm() {
       setStatus({ type: 'error', message: 'Please enter your message.' });
       return false;
     }
+    // Honeypot validation - if filled, it's likely a bot
+    if (formData.honeypot.trim()) {
+      setStatus({ type: 'error', message: 'Spam detected. Please try again.' });
+      return false;
+    }
     return true;
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setStatus({ type: 'loading', message: 'Sending message...' });
 
     try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      const result = await submitContactForm(formData);
+      
+      setStatus({
+        type: 'success',
+        message: result.message || 'Message sent successfully!'
       });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setStatus({ 
-          type: 'success', 
-          message: result.message || 'Message sent successfully!' 
-        });
-        // Reset form
-        setFormData({
-          name: '',
-          email: '',
-          subject: '',
-          message: ''
+      
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        subject: '',
+        message: '',
+        honeypot: ''
+      });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setStatus({
+          type: 'error',
+          message: error.message || 'Failed to send message. Please try again.'
         });
       } else {
-        setStatus({ 
-          type: 'error', 
-          message: result.error || 'Failed to send message. Please try again.' 
+        setStatus({
+          type: 'error',
+          message: 'Network error. Please check your connection and try again.'
         });
       }
-    } catch (error) {
-      setStatus({ 
-        type: 'error', 
-        message: 'Network error. Please check your connection and try again.' 
-      });
     }
   };
 
@@ -184,14 +178,28 @@ export default function ContactForm() {
           />
         </div>
 
+        {/* Honeypot field - hidden from users, bots will fill it */}
+        <div style={{ position: 'absolute', left: '-9999px', opacity: 0, pointerEvents: 'none' }}>
+          <label htmlFor="website">Please leave this field empty:</label>
+          <input
+            type="text"
+            id="website"
+            name="honeypot"
+            value={formData.honeypot}
+            onChange={handleInputChange}
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+          />
+        </div>
+
         {/* Status Messages */}
         {status.message && (
-          <div className={`p-4 rounded-lg flex items-center gap-2 ${
-            status.type === 'success' ? 'bg-green-50 text-green-700' :
-            status.type === 'error' ? 'bg-red-50 text-red-700' :
-            status.type === 'loading' ? 'bg-blue-50 text-blue-700' :
-            ''
-          }`}>
+          <div className={`p-4 rounded-lg flex items-center gap-2 ${status.type === 'success' ? 'bg-green-50 text-green-700' :
+              status.type === 'error' ? 'bg-red-50 text-red-700' :
+                status.type === 'loading' ? 'bg-blue-50 text-blue-700' :
+                  ''
+            }`}>
             {status.type === 'success' && <i className="ph ph-check-circle text-xl"></i>}
             {status.type === 'error' && <i className="ph ph-x-circle text-xl"></i>}
             {status.type === 'loading' && <i className="ph ph-spinner-gap text-xl animate-spin"></i>}
