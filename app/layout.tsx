@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     template: "%s | Kaku"
   },
   description: "Explore Kaku's portfolio showcasing creative projects, artworks, and professional journey. Discover innovative designs and creative solutions.",
-  keywords: ["portfolio", "creative", "projects", "artworks", "artist", "2D", "animations"],
+  keywords: ["kaku", "rahma dwin", "rahma dwi nanda", "portfolio", "creative", "projects", "artworks", "artist", "2D", "animations"],
   authors: [{ name: "Kaku" }],
   creator: "Kaku",
   openGraph: {
