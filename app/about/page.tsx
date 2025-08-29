@@ -1,17 +1,7 @@
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "About",
-  description: "Learn more about Kaku's background, experience, and journey. Connect with a professional artist.",
-  openGraph: {
-    title: "About Kaku",
-    description: "Learn more about Kaku's background, experience, and journey."
-  }
-};
-
 'use client';
 
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
 import { Image } from '@imagekit/next';
 import ContactForm from '../components/ContactForm';
 import { getProfile, type Profile } from '../lib/api';
@@ -92,7 +82,14 @@ export default function About() {
   }
 
   return (
-    <div className="min-h-screen p-8 animate-fade-in">
+    <>
+      <Head>
+        <title>About | Kaku</title>
+        <meta name="description" content="Learn more about Kaku's background, experience, and journey. Connect with a professional artist." />
+        <meta property="og:title" content="About Kaku" />
+        <meta property="og:description" content="Learn more about Kaku's background, experience, and journey." />
+      </Head>
+      <div className="min-h-screen p-8 animate-fade-in">
       <div className="mx-auto xl:w-3/5 w-full">
         {error && (
           <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -170,6 +167,7 @@ export default function About() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

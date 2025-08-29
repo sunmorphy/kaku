@@ -1,22 +1,11 @@
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Portfolio",
-  description: "Browse Kaku's creative portfolio featuring projects and artworks.",
-  openGraph: {
-    title: "Kaku's Portfolio",
-    description: "Browse Kaku's creative portfolio featuring projects and artworks."
-  }
-};
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import Head from 'next/head';
 import PortfolioItem from '../components/PortfolioItem';
 import { getProjects, getArtworks, type Project, type Artwork } from '../lib/api';
 import LoadingAnimation from '../components/LoadingAnimation';
 import { devLog } from '../utils/utils';
-import StructuredData, { portfolioSchema } from '../components/StructuredData';
 
 interface PortfolioItemData {
   id: number;
@@ -116,62 +105,67 @@ export default function Portfolio() {
 
   return (
     <>
-      <StructuredData data={portfolioSchema} />
+      <Head>
+        <title>Portfolio | Kaku</title>
+        <meta name="description" content="Browse Kaku's creative portfolio featuring projects and artworks." />
+        <meta property="og:title" content="Kaku's Portfolio" />
+        <meta property="og:description" content="Browse Kaku's creative portfolio featuring projects and artworks." />
+      </Head>
       <div className="min-h-screen p-8 animate-fade-in">
-        <div className="mx-auto lg:w-3/5 w-full">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-4">Portfolio</h1>
+      <div className="mx-auto lg:w-3/5 w-full">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-4">Portfolio</h1>
 
-            {/* Search */}
-            <div className="mb-6">
-              <input
-                type="text"
-                placeholder="Search by project or artwork name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            {/* Category Filter */}
-            <div className="flex flex-wrap gap-3 mb-8">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-4 py-2 rounded-full text-sm transition-colors ${selectedCategory === category
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
+          {/* Search */}
+          <div className="mb-6">
+            <input
+              type="text"
+              placeholder="Search by project or artwork name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
           </div>
 
-          {/* Portfolio Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-12">
-            {filteredItems.map((item) => (
-              <PortfolioItem
-                key={`${item.type}-${item.id}`}
-                id={item.id.toString()}
-                title={item.title}
-                categories={item.categories}
-                type={item.type}
-                image={item.image}
-                images={item.images}
-              />
+          {/* Category Filter */}
+          <div className="flex flex-wrap gap-3 mb-8">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-full text-sm transition-colors ${selectedCategory === category
+                  ? 'bg-primary text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+              >
+                {category}
+              </button>
             ))}
           </div>
-
-          {filteredItems.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No items found matching your criteria.</p>
-            </div>
-          )}
         </div>
+
+        {/* Portfolio Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-12">
+          {filteredItems.map((item) => (
+            <PortfolioItem
+              key={`${item.type}-${item.id}`}
+              id={item.id.toString()}
+              title={item.title}
+              categories={item.categories}
+              type={item.type}
+              image={item.image}
+              images={item.images}
+            />
+          ))}
+        </div>
+
+        {filteredItems.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">No items found matching your criteria.</p>
+          </div>
+        )}
+      </div>
       </div>
     </>
   );
