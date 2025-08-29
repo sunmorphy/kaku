@@ -35,14 +35,14 @@ export default function About() {
 
           const updatedContactData: ContactItem[] = [];
 
-          profileData.email && (
+          if (profileData.email) {
             updatedContactData.push({
               id: 'email',
               label: profileData.email,
               url: `mailto:${profileData.email}`,
               iconName: 'envelope'
-            })
-          )
+            });
+          }
 
           profileData.socials?.forEach((social) => {
             // Parse the social format: "iconName|https://url" or just "https://url"
@@ -115,7 +115,7 @@ export default function About() {
           <div className="xl:w-2/3 space-y-8">
             {/* Introduction */}
             <div>
-              <h2 className="text-2xl font-semibold mb-4">Hi, I'm {profile?.name || 'Rahma Dwin'}</h2>
+              <h2 className="text-2xl font-semibold mb-4">Hi, I&apos;m {profile?.name || 'Rahma Dwin'}</h2>
               <RichTextContent
                 content={profile?.summary ? profile?.summary : ''}
                 className="space-y-4 text-gray-700 leading-relaxed"
@@ -125,7 +125,7 @@ export default function About() {
             {/* Call to Action */}
             <div className="pt-4">
               <p className="text-gray-600 italic">
-                I'm always open to new opportunities and collaborations. Feel free to reach out!
+                I&apos;m always open to new opportunities and collaborations. Feel free to reach out!
               </p>
             </div>
 
@@ -138,7 +138,7 @@ export default function About() {
 
               {/* Contact Information - Second on desktop (right), First on mobile (top) */}
               <div className="order-1 xl:order-2">
-                <h3 className="text-xl font-semibold mb-4">Let's Connect</h3>
+                <h3 className="text-xl font-semibold mb-4">Let&apos;s Connect</h3>
                 <div className="space-y-3">
                   {contactData && contactData.map((contact) => (
                     <div key={contact.id} className="flex items-center gap-3">

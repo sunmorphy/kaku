@@ -9,18 +9,36 @@ const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "Kaku - Portfolio & Journey",
-    template: "%s | Kaku"
+    default: "Rahma Dwin - Portfolio & Journey",
+    template: "%s | Rahma Dwin"
   },
-  description: "Explore Kaku's portfolio showcasing creative projects, artworks, and professional journey. Discover innovative designs and creative solutions.",
+  description: "Explore Rahma Dwin's portfolio showcasing creative projects, artworks, and professional journey.",
   keywords: ["kaku", "rahma dwin", "rahma dwi nanda", "portfolio", "creative", "projects", "artworks", "artist", "2D", "animations"],
-  authors: [{ name: "Kaku" }],
-  creator: "Kaku",
+  authors: [{ name: "Rahma Dwin" }],
+  creator: "Rahma Dwin",
   openGraph: {
-    title: "Kaku - Portfolio & Journey",
-    description: "Explore Kaku's portfolio showcasing creative projects and artworks.",
+    title: "Rahma Dwin - Portfolio & Journey",
+    description: "Explore Rahma Dwin's portfolio showcasing creative projects and artworks.",
+    url: process.env.NEXT_PUBLIC_SITE_URL!,
+    siteName: "Rahma Dwin Portfolio",
     type: "website",
-    siteName: "Kaku Portfolio"
+    locale: "en_US",
+    images: [
+      {
+        url: `${process.env.NEXT_PUBLIC_SITE_URL!}/api/og`,
+        width: 1200,
+        height: 630,
+        alt: "Rahma Dwin - 2D Artist Portfolio",
+        type: "image/png"
+      }
+    ]
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Rahma Dwin - Portfolio & Journey",
+    description: "Explore Rahma Dwin's portfolio showcasing creative projects and artworks.",
+    images: [`${process.env.NEXT_PUBLIC_SITE_URL!}/api/og`],
+    creator: "@kaku"
   },
   robots: {
     index: true,
@@ -33,11 +51,14 @@ export const metadata: Metadata = {
       "max-snippet": -1
     }
   },
-  verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_VERIFICATION || "your-google-verification-code"
-  },
   alternates: {
-    canonical: process.env.NEXT_PUBLIC_SITE_URL || "https://rahmadwin.art"
+    canonical: process.env.NEXT_PUBLIC_SITE_URL!
+  },
+  other: {
+    'theme-color': '#667eea',
+    'color-scheme': 'light',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default'
   }
 };
 
@@ -51,6 +72,11 @@ export default function RootLayout({
       <head>
         <StructuredData data={websiteSchema} />
         <StructuredData data={personSchema} />
+        {/* Resource hints for better performance */}
+        <link rel="preconnect" href="https://ik.imagekit.io" />
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_API_BASE_URL} />
+        <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+        <link rel="preload" href="/loading.json" as="fetch" crossOrigin="anonymous" />
       </head>
       <body className={`${plusJakartaSans.className}`}>
         <Header />

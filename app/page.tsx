@@ -3,9 +3,15 @@
 import { useState, useEffect } from 'react';
 import { Image } from '@imagekit/next';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { getProfile, type Profile } from './lib/api';
-import LoadingAnimation from './components/LoadingAnimation';
 import { devLog } from './utils/utils';
+
+// Lazy load the loading animation to reduce initial bundle
+const LoadingAnimation = dynamic(() => import('./components/LoadingAnimation'), {
+  ssr: false,
+  loading: () => <div className="w-16 h-16 bg-gray-200 rounded animate-pulse" />
+});
 
 export default function Home() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -16,6 +22,12 @@ export default function Home() {
       try {
         const profileData = await getProfile();
         setProfile(profileData);
+        
+        // Preload banner image for better LCP
+        if (profileData?.banner_image_path) {
+          const img = new window.Image();
+          img.src = profileData.banner_image_path;
+        }
       } catch (error) {
         devLog('Error fetching profile:', error);
       } finally {
@@ -23,13 +35,17 @@ export default function Home() {
       }
     }
 
+    // Start loading immediately
     fetchProfile();
   }, []);
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center">
-        <LoadingAnimation size={256} />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingAnimation size={120} />
+          <p className="mt-4 text-gray-600 text-sm">Loading portfolio...</p>
+        </div>
       </div>
     );
   }

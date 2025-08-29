@@ -1,0 +1,12 @@
+# Modern browsers only - reduces polyfills and bundle size
+> 0.5%
+last 2 versions
+not dead
+not ie 11
+not op_mini all
+
+# Specifically target ES2020+ support
+Chrome >= 80
+Firefox >= 72
+Safari >= 13.1
+Edge >= 80

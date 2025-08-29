@@ -228,7 +228,7 @@ export default function ContactForm() {
       </form>
 
       <p className="text-xs text-gray-500 mt-4 text-center">
-        Your message will be sent directly to my email. I'll get back to you as soon as possible!
+        Your message will be sent directly to my email. I&apos;ll get back to you as soon as possible!
       </p>
     </div>
   );

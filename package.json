@@ -2,9 +2,13 @@
   "name": "kaku",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.17.0"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "build:analyze": "ANALYZE=true next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -26,6 +30,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.21",
+    "critters": "^0.0.23",
+    "cssnano": "^7.1.1",
+    "eslint": "^9.34.0",
+    "eslint-config-next": "^15.5.2",
     "tailwindcss": "^4.1.11",
     "typescript": "^5"
   }
