@@ -10,7 +10,16 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 60,
   },
+  compress: true,
+  poweredByHeader: false,
+  generateEtags: false,
+  trailingSlash: false,
+  experimental: {
+    optimizePackageImports: ['framer-motion'],
+  }
 };
 
 export default nextConfig;

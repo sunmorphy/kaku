@@ -1,3 +1,14 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About",
+  description: "Learn more about Kaku's background, experience, and journey. Connect with a professional artist.",
+  openGraph: {
+    title: "About Kaku",
+    description: "Learn more about Kaku's background, experience, and journey."
+  }
+};
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -96,7 +107,7 @@ export default function About() {
               <Image
                 urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
                 src={profile?.profile_image_path || "/kaku/kaku.png"}
-                alt={`${profile?.name || 'Rahma Dwin'} Profile`}
+                alt={`Professional headshot of ${profile?.name || 'Rahma Dwin'}, ${profile?.role || 'creative professional'} - About page profile image`}
                 fill
                 className="object-cover"
               />
