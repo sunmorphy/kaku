@@ -14,13 +14,20 @@ export default function StructuredData({ data }: StructuredDataProps) {
 export const personSchema = {
   "@context": "https://schema.org",
   "@type": "Person",
-  "name": "Kaku",
+  "name": "Rahma Dwin",
+  "alternateName": ["Kaku", "Rahma Dwin", "Rahma Dwi Nanda"],
   "jobTitle": "2D Artist",
   "url": process.env.NEXT_PUBLIC_SITE_URL || "https://rahmadwin.art",
+  "mainEntityOfPage": process.env.NEXT_PUBLIC_SITE_URL || "https://rahmadwin.art",
   "sameAs": [
     // These will be populated dynamically from profile data
   ],
-  "description": "Creative professional showcasing portfolio of projects and artwork"
+  "description": "A 2D artist showcasing portfolio of projects and artworks",
+  "knowsAbout": ["2D Art", "Digital Art", "Traditional Art", "Artwork", "Animation", "Anime"],
+  "hasOccupation": {
+    "@type": "Occupation",
+    "name": "2D Artist"
+  }
 };
 
 export const websiteSchema = {

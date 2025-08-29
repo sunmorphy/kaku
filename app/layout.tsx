@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Header from './components/Header';
-import StructuredData, { websiteSchema } from './components/StructuredData';
+import StructuredData, { websiteSchema, personSchema } from './components/StructuredData';
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
@@ -34,7 +34,10 @@ export const metadata: Metadata = {
     }
   },
   verification: {
-    google: "google-site-verification-token"
+    google: process.env.NEXT_PUBLIC_GOOGLE_VERIFICATION || "your-google-verification-code"
+  },
+  alternates: {
+    canonical: process.env.NEXT_PUBLIC_SITE_URL || "https://rahmadwin.art"
   }
 };
 
@@ -47,6 +50,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <StructuredData data={websiteSchema} />
+        <StructuredData data={personSchema} />
       </head>
       <body className={`${plusJakartaSans.className}`}>
         <Header />
