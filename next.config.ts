@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['framer-motion'],
     optimizeCss: true,
   },
+  output: 'standalone',
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   }
