@@ -7,7 +7,7 @@ import Navigation from './Navigation';
 
 export default function Header() {
   const pathname = usePathname();
-  
+
   // Hide header on root page
   if (pathname === '/') {
     return null;
@@ -18,7 +18,7 @@ export default function Header() {
       <Link href="/" className="w-xs">
         <Image
           urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
-          src="/kaku/kakushigoto3.png"
+          src="/kaku/kakushigoto.png"
           alt="Logo"
           loading="lazy"
           width={3508}
