@@ -4,14 +4,12 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Header from './components/Header';
 import StructuredData, { websiteSchema, personSchema } from './components/StructuredData';
+import DevToolsProtection from './components/DevToolsProtection';
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: {
-    default: "Rahma Dwin",
-    template: "%s | Rahma Dwin"
-  },
+  title: "Rahma Dwin",
   description: "Rahma Dwin's portfolio.",
   keywords: ["kaku", "rahma dwin", "rahma dwi nanda", "portfolio", "projects", "artworks", "artist", "2D", "animations", "sketches", "illustrations", "digital art", "traditional art", "painting"],
   authors: [{ name: "Rahma Dwin" }],
@@ -49,6 +47,7 @@ export default function RootLayout({
         <StructuredData data={personSchema} />
       </head>
       <body className={`${plusJakartaSans.className}`}>
+        <DevToolsProtection />
         <Header />
         {children}
       </body>
