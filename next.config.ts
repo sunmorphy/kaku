@@ -19,7 +19,6 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
   experimental: {
     optimizePackageImports: ['framer-motion'],
-    optimizeCss: true,
   },
   output: 'standalone',
   compiler: {
