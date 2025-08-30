@@ -41,7 +41,7 @@ export default function Home() {
         <div className="absolute inset-0">
           <Image
             urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
-            src={profile?.banner_image_path || "/kaku/rahma-dwin-my.jpg"}
+            src={profile?.banner_image_path!}
             alt={`${profile?.pseudonym} - ${profile?.role}`}
             fill
             className='object-cover'

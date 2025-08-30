@@ -84,89 +84,90 @@ export default function About() {
   return (
     <>
       <Head>
-        <title>About | Kaku</title>
-        <meta name="description" content="Learn more about Kaku's background, experience, and journey. Connect with a professional artist." />
-        <meta property="og:title" content="About Kaku" />
-        <meta property="og:description" content="Learn more about Kaku's background, experience, and journey." />
+        <title>About Rahma Dwin</title>
+        <meta name="description" content="Rahma's background, experience, and journey as a professional artist." />
+        <meta property="og:title" content="About Rahma Dwin" />
+        <meta property="og:description" content="Rahma's background, experience, and journey as a professional artist." />
       </Head>
+
       <div className="min-h-screen p-8 animate-fade-in">
-      <div className="mx-auto xl:w-3/5 w-full">
-        {error && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-yellow-800 text-sm">{error}</p>
-          </div>
-        )}
-
-        <div className="flex flex-col xl:flex-row gap-12 xl:gap-16">
-          {/* Profile Image */}
-          <div className="xl:w-1/3 flex justify-center xl:justify-end">
-            <div className="relative w-64 h-64 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-              <Image
-                urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
-                src={profile?.profile_image_path || "/kaku/kaku.png"}
-                alt={`Professional headshot of ${profile?.name || 'Rahma Dwin'}, ${profile?.role || 'creative professional'} - About page profile image`}
-                fill
-                className="object-cover"
-              />
+        <div className="mx-auto xl:w-3/5 w-full">
+          {error && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-yellow-800 text-sm">{error}</p>
             </div>
-          </div>
+          )}
 
-          {/* Content */}
-          <div className="xl:w-2/3 space-y-8">
-            {/* Introduction */}
-            <div>
-              <h2 className="text-2xl font-semibold mb-4">Hi, I'm {profile?.name || 'Rahma Dwin'}</h2>
-              <RichTextContent
-                content={profile?.summary ? profile?.summary : ''}
-                className="space-y-4 text-gray-700 leading-relaxed"
-              />
+          <div className="flex flex-col xl:flex-row gap-12 xl:gap-16">
+            {/* Profile Image */}
+            <div className="xl:w-1/3 flex justify-center xl:justify-end">
+              <div className="relative w-64 h-64 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                <Image
+                  urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
+                  src={profile?.profile_image_path!}
+                  alt={profile?.name!}
+                  fill
+                  className="object-cover"
+                />
+              </div>
             </div>
 
-            {/* Call to Action */}
-            <div className="pt-4">
-              <p className="text-gray-600 italic">
-                I'm always open to new opportunities and collaborations. Feel free to reach out!
-              </p>
-            </div>
-
-            {/* Contact Section */}
-            <div className="flex flex-col xl:grid xl:grid-cols-2 gap-8">
-              {/* Contact Form - First on desktop (left), Last on mobile (bottom) */}
-              <div className="order-2 xl:order-1">
-                <ContactForm />
+            {/* Content */}
+            <div className="xl:w-2/3 space-y-8">
+              {/* Introduction */}
+              <div>
+                <h2 className="text-2xl font-semibold mb-4">Hi, I'm {profile?.name}</h2>
+                <RichTextContent
+                  content={profile?.summary ? profile?.summary : ''}
+                  className="space-y-4 text-gray-700 leading-relaxed"
+                />
               </div>
 
-              {/* Contact Information - Second on desktop (right), First on mobile (top) */}
-              <div className="order-1 xl:order-2">
-                <h3 className="text-xl font-semibold mb-4">Let's Connect</h3>
-                <div className="space-y-3">
-                  {contactData && contactData.map((contact) => (
-                    <div key={contact.id} className="flex items-center gap-3">
-                      <div className="w-5 h-5 text-primary">
-                        <i className={`ph ph-${contact.iconName} text-xl`}></i>
+              {/* Call to Action */}
+              <div className="pt-4">
+                <p className="text-gray-600 italic">
+                  I'm always open to new opportunities and collaborations. Feel free to reach out!
+                </p>
+              </div>
+
+              {/* Contact Section */}
+              <div className="flex flex-col xl:grid xl:grid-cols-2 gap-8">
+                {/* Contact Form - First on desktop (left), Last on mobile (bottom) */}
+                <div className="order-2 xl:order-1">
+                  <ContactForm />
+                </div>
+
+                {/* Contact Information - Second on desktop (right), First on mobile (top) */}
+                <div className="order-1 xl:order-2">
+                  <h3 className="text-xl font-semibold mb-4">Let's Connect</h3>
+                  <div className="space-y-3">
+                    {contactData && contactData.map((contact) => (
+                      <div key={contact.id} className="flex items-center gap-3">
+                        <div className="w-5 h-5 text-primary">
+                          <i className={`ph ph-${contact.iconName} text-xl`}></i>
+                        </div>
+                        <a
+                          href={contact.url}
+                          target={contact.id === 'email' ? '_self' : '_blank'}
+                          rel={contact.id === 'email' ? undefined : 'noopener noreferrer nofollow'}
+                          className="text-primary hover:underline"
+                          onClick={(e) => {
+                            if (contact.id !== 'email') {
+                              e.preventDefault();
+                              window.open(contact.url, '_blank', 'noopener,noreferrer');
+                            }
+                          }}
+                        >
+                          {contact.label}
+                        </a>
                       </div>
-                      <a
-                        href={contact.url}
-                        target={contact.id === 'email' ? '_self' : '_blank'}
-                        rel={contact.id === 'email' ? undefined : 'noopener noreferrer nofollow'}
-                        className="text-primary hover:underline"
-                        onClick={(e) => {
-                          if (contact.id !== 'email') {
-                            e.preventDefault();
-                            window.open(contact.url, '_blank', 'noopener,noreferrer');
-                          }
-                        }}
-                      >
-                        {contact.label}
-                      </a>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
     </>
   );

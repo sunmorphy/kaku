@@ -9,18 +9,19 @@ const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "Kaku - Portfolio & Journey",
-    template: "%s | Kaku"
+    default: "Rahma Dwin",
+    template: "%s | Rahma Dwin"
   },
-  description: "Explore Kaku's portfolio showcasing creative projects, artworks, and professional journey. Discover innovative designs and creative solutions.",
-  keywords: ["kaku", "rahma dwin", "rahma dwi nanda", "portfolio", "creative", "projects", "artworks", "artist", "2D", "animations"],
-  authors: [{ name: "Kaku" }],
-  creator: "Kaku",
+  description: "Rahma Dwin's portfolio.",
+  keywords: ["kaku", "rahma dwin", "rahma dwi nanda", "portfolio", "projects", "artworks", "artist", "2D", "animations", "sketches", "illustrations", "digital art", "traditional art", "painting"],
+  authors: [{ name: "Rahma Dwin" }],
+  creator: "Rahma Dwin",
   openGraph: {
-    title: "Kaku - Portfolio & Journey",
-    description: "Explore Kaku's portfolio showcasing creative projects and artworks.",
+    title: "Rahma Dwin",
+    description: "Rahma Dwin's portfolio.",
     type: "website",
-    siteName: "Kaku Portfolio"
+    siteName: "Rahma Dwin Portfolio",
+    images: "https://ik.imagekit.io/4o6binhtw/kaku/banner_1756263185853_Rahma_Dwin_ESMlnH8Mz.jpg"
   },
   robots: {
     index: true,
@@ -33,11 +34,8 @@ export const metadata: Metadata = {
       "max-snippet": -1
     }
   },
-  verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_VERIFICATION || "your-google-verification-code"
-  },
-  alternates: {
-    canonical: process.env.NEXT_PUBLIC_SITE_URL || "https://rahmadwin.art"
+  icons: {
+    icon: "/favicon.ico",
   }
 };
 
