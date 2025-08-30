@@ -16,24 +16,19 @@ interface ContactFormData {
 }
 
 // Validate form data
-function validateFormData(data: unknown): data is ContactFormData {
-  if (!data || typeof data !== 'object') {
-    return false;
-  }
-  
-  const formData = data as Record<string, unknown>;
-  
+function validateFormData(data: any): data is ContactFormData {
   return (
-    typeof formData.name === 'string' &&
-    typeof formData.email === 'string' &&
-    typeof formData.subject === 'string' &&
-    typeof formData.message === 'string' &&
-    typeof formData.honeypot === 'string' &&
-    formData.name.trim().length > 0 &&
-    formData.email.trim().length > 0 &&
-    formData.subject.trim().length > 0 &&
-    formData.message.trim().length > 0 &&
-    formData.email.includes('@')
+    data &&
+    typeof data.name === 'string' &&
+    typeof data.email === 'string' &&
+    typeof data.subject === 'string' &&
+    typeof data.message === 'string' &&
+    typeof data.honeypot === 'string' &&
+    data.name.trim().length > 0 &&
+    data.email.trim().length > 0 &&
+    data.subject.trim().length > 0 &&
+    data.message.trim().length > 0 &&
+    data.email.includes('@')
   );
 }
 

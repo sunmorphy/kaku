@@ -94,14 +94,14 @@ export class ApiError extends Error {
   }
 }
 
-async function fetchApi(endpoint: string, options?: RequestInit): Promise<unknown> {
+async function fetchApi(endpoint: string, options?: RequestInit): Promise<any> {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
     
     let data;
     try {
       data = await response.json();
-    } catch {
+    } catch (jsonError) {
       // If JSON parsing fails, throw a generic error
       throw new ApiError(`API response parsing failed: ${response.statusText}`, response.status);
     }
@@ -123,7 +123,7 @@ async function fetchApi(endpoint: string, options?: RequestInit): Promise<unknow
 
 export async function getProjects(userId = 1, page = 1, limit = 25): Promise<PaginatedResponse<Project>> {
   try {
-    const data = await fetchApi(`/projects/user/${userId}?page=${page}&limit=${limit}`) as PaginatedResponse<Project>;
+    const data = await fetchApi(`/projects/user/${userId}?page=${page}&limit=${limit}`);
     return data;
   } catch (error) {
     devLog('Failed to fetch projects:', error);
@@ -143,7 +143,7 @@ export async function getProjects(userId = 1, page = 1, limit = 25): Promise<Pag
 
 export async function getProject(id: string): Promise<Project | null> {
   try {
-    const data = await fetchApi(`/projects/${id}`) as Project;
+    const data = await fetchApi(`/projects/${id}`);
     return data;
   } catch (error) {
     devLog(`Failed to fetch project ${id}:`, error);
@@ -153,7 +153,7 @@ export async function getProject(id: string): Promise<Project | null> {
 
 export async function getArtworks(userId = 1, page = 1, limit = 25): Promise<PaginatedResponse<Artwork>> {
   try {
-    const data = await fetchApi(`/artworks/user/${userId}?page=${page}&limit=${limit}`) as PaginatedResponse<Artwork>;
+    const data = await fetchApi(`/artworks/user/${userId}?page=${page}&limit=${limit}`);
     return data;
   } catch (error) {
     devLog('Failed to fetch artworks:', error);
@@ -173,7 +173,7 @@ export async function getArtworks(userId = 1, page = 1, limit = 25): Promise<Pag
 
 export async function getArtwork(id: string): Promise<Artwork | null> {
   try {
-    const data = await fetchApi(`/artworks/${id}`) as Artwork;
+    const data = await fetchApi(`/artworks/${id}`);
     return data;
   } catch (error) {
     devLog(`Failed to fetch artwork ${id}:`, error);
@@ -183,7 +183,7 @@ export async function getArtwork(id: string): Promise<Artwork | null> {
 
 export async function getProfile(userId = 1): Promise<Profile | null> {
   try {
-    const data = await fetchApi(`/auth/profile/${userId}`) as Profile;
+    const data = await fetchApi(`/auth/profile/${userId}`);
     return data;
   } catch (error) {
     devLog('Failed to fetch profile:', error);
@@ -193,7 +193,7 @@ export async function getProfile(userId = 1): Promise<Profile | null> {
 
 export async function getCategories(userId = 1): Promise<Category[]> {
   try {
-    const data = await fetchApi(`/categories/user/${userId}`) as Category[];
+    const data = await fetchApi(`/categories/user/${userId}`);
     return Array.isArray(data) ? data : [];
   } catch (error) {
     devLog('Failed to fetch categories:', error);
@@ -222,7 +222,7 @@ export async function submitContactForm(formData: ContactFormData): Promise<Cont
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(formData),
-    }) as ContactResponse;
+    });
     return data;
   } catch (error) {
     devLog('Failed to submit contact form:', error);
