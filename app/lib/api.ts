@@ -7,6 +7,7 @@ export interface Project {
   title: string;
   description: string | null;
   batch_image_path: string[];
+  type: string;
   user_id: number;
   created_at: string;
   updated_at: string;
@@ -97,7 +98,7 @@ export class ApiError extends Error {
 async function fetchApi(endpoint: string, options?: RequestInit): Promise<any> {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-    
+
     let data;
     try {
       data = await response.json();
@@ -105,13 +106,13 @@ async function fetchApi(endpoint: string, options?: RequestInit): Promise<any> {
       // If JSON parsing fails, throw a generic error
       throw new ApiError(`API response parsing failed: ${response.statusText}`, response.status);
     }
-    
+
     if (!response.ok) {
       // Parse error message from API response
       const errorMessage = data?.error || `API request failed: ${response.statusText}`;
       throw new ApiError(errorMessage, response.status);
     }
-    
+
     return data;
   } catch (error) {
     if (error instanceof ApiError) {
@@ -121,9 +122,13 @@ async function fetchApi(endpoint: string, options?: RequestInit): Promise<any> {
   }
 }
 
-export async function getProjects(userId = 1, page = 1, limit = 25): Promise<PaginatedResponse<Project>> {
+export async function getProjects(userId = 1, page = 1, limit = 25, type?: string): Promise<PaginatedResponse<Project>> {
   try {
-    const data = await fetchApi(`/projects/user/${userId}?page=${page}&limit=${limit}`);
+    let url = `/projects/user/${userId}?page=${page}&limit=${limit}`;
+    if (type) {
+      url += `&type=${type}`;
+    }
+    const data = await fetchApi(url);
     return data;
   } catch (error) {
     devLog('Failed to fetch projects:', error);
@@ -151,9 +156,13 @@ export async function getProject(id: string): Promise<Project | null> {
   }
 }
 
-export async function getArtworks(userId = 1, page = 1, limit = 25): Promise<PaginatedResponse<Artwork>> {
+export async function getArtworks(userId = 1, page = 1, limit = 25, type?: string): Promise<PaginatedResponse<Artwork>> {
   try {
-    const data = await fetchApi(`/artworks/user/${userId}?page=${page}&limit=${limit}`);
+    let url = `/artworks/user/${userId}?page=${page}&limit=${limit}`;
+    if (type) {
+      url += `&type=${type}`;
+    }
+    const data = await fetchApi(url);
     return data;
   } catch (error) {
     devLog('Failed to fetch artworks:', error);

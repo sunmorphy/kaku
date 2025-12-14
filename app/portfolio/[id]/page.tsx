@@ -47,7 +47,7 @@ export default function PortfolioDetail({ params, searchParams }: Props) {
         if (type === 'project') {
           // Fetch only projects
           const projects = await getProjects();
-          const project = projects.data.find(p => p.id === id);
+          const project = projects.data.find(p => p.id === id && p.type === 'portfolio');
           if (project) {
             setItem({ ...project, type: 'project' });
             return;
@@ -67,7 +67,7 @@ export default function PortfolioDetail({ params, searchParams }: Props) {
             getArtworks()
           ]);
 
-          const project = projects.data.find(p => p.id === id);
+          const project = projects.data.find(p => p.id === id && p.type === 'portfolio');
           if (project) {
             setItem({ ...project, type: 'project' });
             return;

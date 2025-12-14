@@ -23,20 +23,18 @@ export default function Portfolio() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
         setError(null);
 
+        // Fetch projects and portfolio artworks using API filters
         const [projects, artworks] = await Promise.all([
-          getProjects(),
-          getArtworks()
+          getProjects(1, 1, 100, 'portfolio'),
+          getArtworks(1, 1, 100, 'portfolio')
         ]);
-
-        const portfolioArtworks = artworks.data.filter((artwork: Artwork) =>
-          artwork.type === 'portfolio'
-        );
 
         const combinedData: PortfolioItemData[] = [
           ...projects.data.map((project: Project) => ({
@@ -47,7 +45,7 @@ export default function Portfolio() {
             image: project.batch_image_path?.[0] || '',
             images: project.batch_image_path || []
           })),
-          ...portfolioArtworks.map((artwork: Artwork) => ({
+          ...artworks.data.map((artwork: Artwork) => ({
             id: artwork.id,
             title: artwork.title,
             categories: artwork.artwork_categories?.map(cat => cat.category.name) || ['Uncategorized'],
@@ -67,6 +65,7 @@ export default function Portfolio() {
 
     fetchData();
   }, []);
+
 
   const categories = useMemo(() => {
     const allCategories = portfolioData.flatMap(item => item.categories);
@@ -112,60 +111,60 @@ export default function Portfolio() {
         <meta property="og:description" content="Browse Kaku's creative portfolio featuring projects and artworks." />
       </Head>
       <div className="min-h-screen p-8 animate-fade-in">
-      <div className="mx-auto lg:w-3/5 w-full">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">Portfolio</h1>
+        <div className="mx-auto lg:w-3/5 w-full">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold mb-4">Portfolio</h1>
 
-          {/* Search */}
-          <div className="mb-6">
-            <input
-              type="text"
-              placeholder="Search by project or artwork name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+            {/* Search */}
+            <div className="mb-6">
+              <input
+                type="text"
+                placeholder="Search by project or artwork name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            {/* Category Filter */}
+            <div className="flex flex-wrap gap-3 mb-8">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-4 py-2 rounded-full text-sm transition-colors ${selectedCategory === category
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Category Filter */}
-          <div className="flex flex-wrap gap-3 mb-8">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full text-sm transition-colors ${selectedCategory === category
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-              >
-                {category}
-              </button>
+          {/* Portfolio Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-12">
+            {filteredItems.map((item) => (
+              <PortfolioItem
+                key={`${item.type}-${item.id}`}
+                id={item.id.toString()}
+                title={item.title}
+                categories={item.categories}
+                type={item.type}
+                image={item.image}
+                images={item.images}
+              />
             ))}
           </div>
-        </div>
 
-        {/* Portfolio Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-12">
-          {filteredItems.map((item) => (
-            <PortfolioItem
-              key={`${item.type}-${item.id}`}
-              id={item.id.toString()}
-              title={item.title}
-              categories={item.categories}
-              type={item.type}
-              image={item.image}
-              images={item.images}
-            />
-          ))}
+          {filteredItems.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">No items found matching your criteria.</p>
+            </div>
+          )}
         </div>
-
-        {filteredItems.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No items found matching your criteria.</p>
-          </div>
-        )}
-      </div>
       </div>
     </>
   );
