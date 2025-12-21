@@ -5,13 +5,14 @@ import { motion } from 'framer-motion';
 interface PortfolioItemProps {
   id: string;
   title: string;
+  description?: string | null;
   categories: string[];
   type: 'project' | 'artwork';
   image: string;
   images?: string[];
 }
 
-export default function PortfolioItem({ id, title, categories, type, image, images }: PortfolioItemProps) {
+export default function PortfolioItem({ id, title, description, categories, type, image, images }: PortfolioItemProps) {
   const isProject = type === 'project';
   const totalImages = images?.length || 1;
 
@@ -195,6 +196,11 @@ export default function PortfolioItem({ id, title, categories, type, image, imag
             >
               {title}
             </motion.h3>
+            {description && (
+              <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                {description}
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               {categories.map((category, index) => (
                 <motion.div

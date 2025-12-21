@@ -8,6 +8,7 @@ export interface Project {
   description: string | null;
   batch_image_path: string[];
   type: string;
+  published: boolean;
   user_id: number;
   created_at: string;
   updated_at: string;
@@ -33,6 +34,7 @@ export interface Artwork {
   description: string | null;
   image_path: string;
   type: string;
+  published: boolean;
   user_id: number;
   created_at: string;
   updated_at: string;
@@ -42,6 +44,31 @@ export interface Artwork {
 export interface ArtworkCategory {
   id: number;
   artwork_id: number;
+  category_id: number;
+  category: {
+    id: number;
+    name: string;
+    user_id: number;
+    created_at: string;
+    updated_at: string;
+  };
+}
+
+export interface Animation {
+  id: number;
+  title: string;
+  description: string | null;
+  batch_video_path: string[];
+  published: boolean;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+  animation_categories: AnimationCategory[];
+}
+
+export interface AnimationCategory {
+  id: number;
+  animation_id: number;
   category_id: number;
   category: {
     id: number;
@@ -186,6 +213,37 @@ export async function getArtwork(id: string): Promise<Artwork | null> {
     return data;
   } catch (error) {
     devLog(`Failed to fetch artwork ${id}:`, error);
+    return null;
+  }
+}
+
+export async function getAnimations(userId = 1, page = 1, limit = 25): Promise<PaginatedResponse<Animation>> {
+  try {
+    const url = `/animations/user/${userId}?page=${page}&limit=${limit}`;
+    const data = await fetchApi(url);
+    return data;
+  } catch (error) {
+    devLog('Failed to fetch animations:', error);
+    return {
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 25,
+        total: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
+      },
+    };
+  }
+}
+
+export async function getAnimation(id: string): Promise<Animation | null> {
+  try {
+    const data = await fetchApi(`/animations/${id}`);
+    return data;
+  } catch (error) {
+    devLog(`Failed to fetch animation ${id}:`, error);
     return null;
   }
 }

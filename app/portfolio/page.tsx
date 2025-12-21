@@ -10,6 +10,7 @@ import { devLog } from '../utils/utils';
 interface PortfolioItemData {
   id: number;
   title: string;
+  description?: string | null;
   categories: string[];
   type: 'project' | 'artwork';
   image: string;
@@ -40,6 +41,7 @@ export default function Portfolio() {
           ...projects.data.map((project: Project) => ({
             id: project.id,
             title: project.title,
+            description: project.description,
             categories: project.project_categories?.map(cat => cat.category.name) || ['Uncategorized'],
             type: 'project' as const,
             image: project.batch_image_path?.[0] || '',
@@ -48,6 +50,7 @@ export default function Portfolio() {
           ...artworks.data.map((artwork: Artwork) => ({
             id: artwork.id,
             title: artwork.title,
+            description: artwork.description,
             categories: artwork.artwork_categories?.map(cat => cat.category.name) || ['Uncategorized'],
             type: 'artwork' as const,
             image: artwork.image_path
@@ -151,6 +154,7 @@ export default function Portfolio() {
                 key={`${item.type}-${item.id}`}
                 id={item.id.toString()}
                 title={item.title}
+                description={item.description}
                 categories={item.categories}
                 type={item.type}
                 image={item.image}
