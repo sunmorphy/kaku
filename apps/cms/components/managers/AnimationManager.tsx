@@ -54,7 +54,6 @@ export default function AnimationManager() {
     fetchAnimations()
   }, [currentPage, searchTerm, selectedCategoryIds])
 
-
   const fetchAnimations = async () => {
     try {
       setLoading(true)

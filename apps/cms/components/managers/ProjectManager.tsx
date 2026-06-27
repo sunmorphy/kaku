@@ -56,7 +56,6 @@ export default function ProjectManager() {
     fetchProjects()
   }, [currentPage, searchTerm, selectedCategoryIds])
 
-
   const fetchProjects = async () => {
     try {
       setLoading(true)
@@ -72,8 +71,6 @@ export default function ProjectManager() {
       if (selectedCategoryIds.length > 0) {
         params.append('categoryIds', JSON.stringify(selectedCategoryIds))
       }
-
-
 
       const response = await apiRequest<{
         data: Project[]
@@ -652,8 +649,6 @@ export default function ProjectManager() {
                   </div>
                 )}
               </div>
-
-
 
               <div>
                 <label className="block text-sm font-medium mb-2">Categories</label>

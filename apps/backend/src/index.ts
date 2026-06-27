@@ -28,7 +28,7 @@ app.use('/api/projects', projectsRouter);
 app.use('/api/animations', animationsRouter);
 
 app.get('/', (_req, res) => {
-  res.json({ message: 'Meng CMS API is running!' });
+  res.json({ message: 'Kaku API is running!' });
 });
 
 app.listen(PORT, () => {

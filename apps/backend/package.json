@@ -1,7 +1,7 @@
 {
   "name": "kaku-be",
   "version": "1.0.0",
-  "description": "Express backend for Meng CMS",
+  "description": "Express backend for Kaku CMS",
   "main": "src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",

@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Meng CMS",
-  description: "Content Management System for Meng Portfolio",
+  title: "Kaku Content Management System",
+  description: "Content Management System for Kaku Portfolio",
   robots: {
     index: false,
     follow: false,

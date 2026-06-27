@@ -1,4 +1,4 @@
--- Database schema for Meng CMS
+-- Database schema for Kaku
 
 SET TIME ZONE 'Asia/Jakarta';
 

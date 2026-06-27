@@ -50,7 +50,6 @@ export default function ArtworkManager() {
     fetchArtworks()
   }, [currentPage, searchTerm, selectedCategoryIds])
 
-
   const fetchArtworks = async () => {
     try {
       setLoading(true)
@@ -66,8 +65,6 @@ export default function ArtworkManager() {
       if (selectedCategoryIds.length > 0) {
         params.append('categoryIds', JSON.stringify(selectedCategoryIds))
       }
-
-
 
       const response = await apiRequest<{
         data: Artwork[]
@@ -441,8 +438,6 @@ export default function ArtworkManager() {
                   disabled={submitting}
                 />
               </div>
-
-
 
               <div>
                 <label className="block text-sm font-medium mb-2">Categories</label>
