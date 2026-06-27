@@ -52,7 +52,7 @@ export default function Sidebar({ activeSection, onSectionChange, isOpen = true,
       <div className={`${isOpen ? 'translate-x-0' : '-translate-x-full'
         } fixed lg:static lg:translate-x-0 inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white min-h-screen flex flex-col transition-transform duration-300 ease-in-out`}>
         <div className="p-4 md:p-6">
-          <h2 className="text-lg md:text-xl font-bold">Meng</h2>
+          <h2 className="text-lg md:text-xl font-bold">Manage Content</h2>
           <p className="text-slate-300 text-xs md:text-sm mt-1">Awooo, {user?.username}!</p>
         </div>
 

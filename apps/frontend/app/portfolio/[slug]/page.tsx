@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getProjects, getArtworks, type Project, type Artwork } from '../../lib/api';
+import { getProject, getArtwork, type Project, type Artwork } from '../../lib/api';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import { devLog } from '@/app/utils/utils';
 
 interface Props {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
   searchParams?: Promise<{ type?: string }>;
 }
 
@@ -16,7 +16,7 @@ export default function PortfolioDetail({ params, searchParams }: Props) {
   const [item, setItem] = useState<(Project & { type: 'project' }) | (Artwork & { type: 'artwork' }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
+  const [resolvedParams, setResolvedParams] = useState<{ slug: string } | null>(null);
   const [resolvedSearchParams, setResolvedSearchParams] = useState<{ type?: string } | null>(null);
 
   useEffect(() => {
@@ -41,39 +41,17 @@ export default function PortfolioDetail({ params, searchParams }: Props) {
           return;
         }
 
-        const id = parseInt(resolvedParams.id);
+        const slug = resolvedParams.slug;
         const type = resolvedSearchParams.type;
 
         if (type === 'project') {
-          // Fetch only projects
-          const projects = await getProjects();
-          const project = projects.data.find(p => p.id === id && p.type === 'portfolio');
+          const project = await getProject(slug);
           if (project) {
             setItem({ ...project, type: 'project' });
             return;
           }
         } else if (type === 'artwork') {
-          // Fetch only artworks
-          const artworks = await getArtworks();
-          const artwork = artworks.data.find(a => a.id === id && a.type === 'portfolio');
-          if (artwork) {
-            setItem({ ...artwork, type: 'artwork' });
-            return;
-          }
-        } else {
-          // Fallback: search both if type not specified
-          const [projects, artworks] = await Promise.all([
-            getProjects(),
-            getArtworks()
-          ]);
-
-          const project = projects.data.find(p => p.id === id && p.type === 'portfolio');
-          if (project) {
-            setItem({ ...project, type: 'project' });
-            return;
-          }
-
-          const artwork = artworks.data.find(a => a.id === id && a.type === 'portfolio');
+          const artwork = await getArtwork(slug);
           if (artwork) {
             setItem({ ...artwork, type: 'artwork' });
             return;
@@ -121,14 +99,12 @@ export default function PortfolioDetail({ params, searchParams }: Props) {
             <div className="flex justify-between items-start mb-4">
               <div className='flex flex-col space-y-4'>
                 <h1 className="text-4xl font-bold">{item.title}</h1>
-                {/* Description */}
                 {item.description && (
                   <div>
                     <p className="text-gray-700 leading-relaxed">{item.description}</p>
                   </div>
                 )}
 
-                {/* Categories */}
                 <div className="flex flex-wrap gap-2">
                   {item.type === 'project'
                     ? (item as Project & { type: 'project' }).project_categories?.map((cat, index) => (
@@ -166,10 +142,9 @@ export default function PortfolioDetail({ params, searchParams }: Props) {
           </div>
         </div>
 
-        {/* All Images */}
+        {/* Images */}
         <div className="space-y-8 mt-24">
           {item.type === 'project' ? (
-            // Show all project images
             (item as Project & { type: 'project' }).batch_image_path?.map((imagePath, index) => (
               <div key={index} className="w-full rounded-lg overflow-hidden bg-gray-100">
                 <img
@@ -180,7 +155,6 @@ export default function PortfolioDetail({ params, searchParams }: Props) {
               </div>
             ))
           ) : (
-            // Show single artwork image
             <div className="w-full rounded-lg overflow-hidden bg-gray-100">
               <img
                 src={(item as Artwork & { type: 'artwork' }).image_path}

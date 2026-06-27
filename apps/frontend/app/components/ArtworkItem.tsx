@@ -6,7 +6,7 @@ interface ArtworkItemProps {
   title: string;
   categories: string[];
   image: string;
-  images?: string[]; // For projects with multiple images
+  images?: string[];
   description: string;
   onClick: () => void;
 }
@@ -119,7 +119,6 @@ export default function ArtworkItem({ id, title, categories, image, images, desc
                   className="absolute inset-0 w-full h-full object-cover"
                 />
 
-                {/* Show count badge on last image if there are more */}
                 {index === 3 && remainingCount > 0 && (
                   <motion.div
                     className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-sm"
@@ -140,7 +139,6 @@ export default function ArtworkItem({ id, title, categories, image, images, desc
             ))}
           </div>
         ) : (
-          // Single image with overlay
           <>
             <motion.img
               src={image}
@@ -155,7 +153,6 @@ export default function ArtworkItem({ id, title, categories, image, images, desc
               }}
             />
 
-            {/* Color overlay effect for single images */}
             <motion.div
               className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-primary/10 mix-blend-overlay"
               variants={overlayVariants}
@@ -164,14 +161,12 @@ export default function ArtworkItem({ id, title, categories, image, images, desc
           </>
         )}
 
-        {/* Main overlay */}
         <motion.div
           className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"
           variants={overlayVariants}
           transition={{ duration: 0.4 }}
         />
 
-        {/* Text content */}
         <motion.div
           className="absolute inset-0 flex flex-col justify-end p-4"
           variants={textContainerVariants}
@@ -222,7 +217,6 @@ export default function ArtworkItem({ id, title, categories, image, images, desc
             )}
           </div>
 
-          {/* Image count badge for multiple images */}
           {hasMultipleImages && (
             <motion.div
               className="mt-2 inline-flex items-center gap-1 text-white text-xs font-semibold"
@@ -238,7 +232,6 @@ export default function ArtworkItem({ id, title, categories, image, images, desc
           )}
         </motion.div>
 
-        {/* Border glow */}
         <motion.div
           className="absolute inset-0 rounded-2xl border-2 border-primary/30"
           initial={{ opacity: 0 }}

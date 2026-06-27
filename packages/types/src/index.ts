@@ -64,6 +64,7 @@ export interface Artwork {
   user_id?: number;
   created_at: string;
   updated_at: string;
+  slug?: string | null;
   artwork_categories?: { category: Category }[];
 }
 
@@ -84,6 +85,8 @@ export interface Project {
   user_id?: number;
   created_at: string;
   updated_at: string;
+  slug?: string | null;
+  cover_image_path?: string | null;
   project_categories?: { category: Category }[];
 }
 
@@ -103,6 +106,8 @@ export interface Animation {
   user_id?: number;
   created_at: string;
   updated_at: string;
+  slug?: string | null;
+  cover_image_path?: string | null;
   animation_categories?: { category: Category }[];
 }
 

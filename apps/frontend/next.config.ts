@@ -5,13 +5,21 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'ik.imagekit.io',
+        hostname: 'kaku.andpuji27.workers.dev',
         port: '',
         pathname: '/**',
       },
+      {
+        // Backend image host
+        protocol: "https",
+        hostname: "api.rahmadwin.art",
+      },
+      {
+        // Allow any remaining CDN / object-storage URLs
+        protocol: "https",
+        hostname: "**",
+      },
     ],
-    formats: ['image/webp', 'image/avif'],
-    minimumCacheTTL: 60,
   },
   compress: true,
   poweredByHeader: false,

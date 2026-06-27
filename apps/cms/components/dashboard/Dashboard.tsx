@@ -116,7 +116,6 @@ export default function Dashboard({ onSectionChange }: DashboardProps) {
         })}
       </div>
 
-      {/* Productivity Chart */}
       <div className="mb-8">
         <ProductivityChart />
       </div>

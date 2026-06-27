@@ -46,25 +46,21 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
     try {
       setLoading(true)
       setError(null)
-      
-      // Fetch all artworks and projects for the selected year (no pagination needed for chart data)
+
       const [artworksResponse, projectsResponse] = await Promise.all([
-        apiRequest<{data: Artwork[], pagination: {total: number}}>('/artworks/my?limit=1000'), // Get all artworks
-        apiRequest<{data: Project[], pagination: {total: number}}>('/projects/my?limit=1000')   // Get all projects
+        apiRequest<{ data: Artwork[], pagination: { total: number } }>('/artworks/my?limit=1000'), // Get all artworks
+        apiRequest<{ data: Project[], pagination: { total: number } }>('/projects/my?limit=1000')   // Get all projects
       ])
-      
+
       const artworks = artworksResponse.data
       const projects = projectsResponse.data
-      
-      // Process the data to get monthly counts for the selected year
+
       const monthlyCounts: { [month: number]: { artworks: number; projects: number } } = {}
-      
-      // Initialize all months with 0 counts
+
       for (let month = 0; month < 12; month++) {
         monthlyCounts[month] = { artworks: 0, projects: 0 }
       }
-      
-      // Count artworks created in the selected year
+
       artworks.forEach(artwork => {
         const createdDate = new Date(artwork.created_at)
         if (createdDate.getFullYear() === selectedYear) {
@@ -72,8 +68,7 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
           monthlyCounts[month].artworks++
         }
       })
-      
-      // Count projects created in the selected year
+
       projects.forEach(project => {
         const createdDate = new Date(project.created_at)
         if (createdDate.getFullYear() === selectedYear) {
@@ -81,8 +76,7 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
           monthlyCounts[month].projects++
         }
       })
-      
-      // Convert to ProductivityData array
+
       const annualData: ProductivityData[] = []
       for (let month = 0; month < 12; month++) {
         const { artworks: artworkCount, projects: projectCount } = monthlyCounts[month]
@@ -94,7 +88,7 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
           total: artworkCount + projectCount
         })
       }
-      
+
       setData(annualData)
     } catch (err) {
       console.error('Failed to fetch productivity data:', err)
@@ -108,14 +102,14 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
   const totalArtworks = data.reduce((sum, d) => sum + d.artworks, 0)
   const totalProjects = data.reduce((sum, d) => sum + d.projects, 0)
   const avgMonthly = data.length > 0 ? (totalArtworks + totalProjects) / data.length : 0
-  
+
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ]
-  
+
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i)
-  
+
   const getYearLabel = () => {
     return selectedYear.toString()
   }
@@ -193,9 +187,8 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
                       <button
                         key={year}
                         onClick={() => handleYearSelect(year)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                          year === selectedYear ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                        }`}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${year === selectedYear ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                          }`}
                       >
                         {year}
                       </button>
@@ -209,7 +202,7 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
         <CardContent>
           <div className="text-center py-8">
             <p className="text-gray-500 mb-4">Unable to load productivity data</p>
-            <button 
+            <button
               onClick={() => fetchAnnualProductivityData()}
               className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
             >
@@ -250,9 +243,8 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
                     <button
                       key={year}
                       onClick={() => handleYearSelect(year)}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                        year === selectedYear ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                      }`}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${year === selectedYear ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                        }`}
                     >
                       {year}
                     </button>
@@ -264,7 +256,6 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
         </div>
       </CardHeader>
       <CardContent>
-        {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">{totalArtworks}</div>
@@ -280,10 +271,8 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
           </div>
         </div>
 
-        {/* Chart */}
         <div className="h-64 w-full">
           <svg viewBox="0 0 800 200" className="w-full h-full">
-            {/* Grid lines */}
             {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
               <line
                 key={ratio}
@@ -297,24 +286,21 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
               />
             ))}
 
-            {/* Line Chart */}
             {(() => {
-              // Generate line paths
               const artworkPath = data.map((item, index) => {
                 const x = (index * 800) / (data.length - 1)
                 const y = 180 - (item.artworks / maxValue) * 160
                 return `${index === 0 ? 'M' : 'L'} ${x} ${y}`
               }).join(' ')
-              
+
               const projectPath = data.map((item, index) => {
                 const x = (index * 800) / (data.length - 1)
                 const y = 180 - (item.projects / maxValue) * 160
                 return `${index === 0 ? 'M' : 'L'} ${x} ${y}`
               }).join(' ')
-              
+
               return (
                 <g>
-                  {/* Artwork line */}
                   <path
                     d={artworkPath}
                     stroke="#3b82f6"
@@ -324,8 +310,7 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
                     strokeLinejoin="round"
                     className="drop-shadow-sm"
                   />
-                  
-                  {/* Project line */}
+
                   <path
                     d={projectPath}
                     stroke="#10b981"
@@ -335,16 +320,14 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
                     strokeLinejoin="round"
                     className="drop-shadow-sm"
                   />
-                  
-                  {/* Data points and labels */}
+
                   {data.map((item, index) => {
                     const x = (index * 800) / (data.length - 1)
                     const artworkY = 180 - (item.artworks / maxValue) * 160
                     const projectY = 180 - (item.projects / maxValue) * 160
-                    
+
                     return (
                       <g key={item.month}>
-                        {/* Artwork data point */}
                         <circle
                           cx={x}
                           cy={artworkY}
@@ -356,8 +339,7 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
                         >
                           <title>{item.monthName}: {item.artworks} artworks</title>
                         </circle>
-                        
-                        {/* Project data point */}
+
                         <circle
                           cx={x}
                           cy={projectY}
@@ -369,8 +351,7 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
                         >
                           <title>{item.monthName}: {item.projects} projects</title>
                         </circle>
-                        
-                        {/* Month label */}
+
                         <text
                           x={x}
                           y={195}
@@ -416,12 +397,12 @@ export default function ProductivityChart({ className }: ProductivityChartProps)
             {totalArtworks + totalProjects === 0
               ? `No activity recorded for ${getYearLabel()}. Start creating to see your productivity trends!`
               : avgMonthly >= 10
-              ? "Excellent productivity! You're consistently creating content throughout the year."
-              : avgMonthly >= 5
-              ? "Great progress! You're maintaining good creative momentum."
-              : avgMonthly >= 2
-              ? "You're making steady progress. Consider setting monthly goals to boost your output."
-              : "Low activity this year. Try setting small monthly goals to build consistent momentum."}
+                ? "Excellent productivity! You're consistently creating content throughout the year."
+                : avgMonthly >= 5
+                  ? "Great progress! You're maintaining good creative momentum."
+                  : avgMonthly >= 2
+                    ? "You're making steady progress. Consider setting monthly goals to boost your output."
+                    : "Low activity this year. Try setting small monthly goals to build consistent momentum."}
           </p>
         </div>
       </CardContent>

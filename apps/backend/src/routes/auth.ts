@@ -1,29 +1,19 @@
 import { Router } from 'express';
-import { query } from '../db/connection';
+import { db } from '../db/connection';
+import { users, contactMessages } from '../db/schema';
+import { UserProfile } from '@kaku/types';
+import { eq, or, and, ne, gt, count } from 'drizzle-orm';
 import { hashPassword, comparePassword } from '../utils/password';
 import { generateToken } from '../utils/jwt';
 import { authenticateToken } from '../middleware/auth';
-import { User, UserProfile } from '../db/schema';
 import { uploadProfileImageToR2 } from '../services/r2';
 import { sendContactEmail } from '../utils/email';
 import validator from 'validator';
-import multer from 'multer';
+import { upload } from '../middleware/upload';
 
 const router = Router();
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (_, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
-
-// Login user
+// Login
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -32,40 +22,34 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    // Find user by username or email
-    const result = await query(`
-      SELECT id, username, email, password_hash, name, pseudonym, role, summary, short_summary, socials, profile_image_path, banner_image_path, created_at, updated_at
-      FROM users 
-      WHERE username = $1 OR email = $1
-    `, [username]);
+    const result = await db.select().from(users)
+      .where(or(eq(users.username, username), eq(users.email, username)));
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const user = result.rows[0] as User;
+    const user = result[0];
 
-    // Verify password
     const isValidPassword = await comparePassword(password, user.password_hash);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate token
     const userProfile: UserProfile = {
       id: user.id,
       username: user.username,
       email: user.email,
-      name: user.name,
-      pseudonym: user.pseudonym,
-      role: user.role,
-      summary: user.summary,
-      short_summary: user.short_summary,
-      socials: user.socials,
-      profile_image_path: user.profile_image_path,
-      banner_image_path: user.banner_image_path,
-      created_at: user.created_at,
-      updated_at: user.updated_at
+      name: user.name || '',
+      pseudonym: user.pseudonym || '',
+      role: user.role || 'Artist',
+      summary: user.summary || '',
+      short_summary: user.short_summary || '',
+      socials: user.socials || [],
+      profile_image_path: user.profile_image_path || '',
+      banner_image_path: user.banner_image_path || '',
+      created_at: user.created_at ? user.created_at.toISOString() : new Date().toISOString(),
+      updated_at: user.updated_at ? user.updated_at.toISOString() : new Date().toISOString()
     };
 
     const token = generateToken(userProfile);
@@ -84,37 +68,35 @@ router.post('/login', async (req, res) => {
 // Get current user profile
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
-    const result = await query(`
-      SELECT id, username, email, name, pseudonym, role, summary, short_summary, socials, profile_image_path, banner_image_path, created_at, updated_at
-      FROM users 
-      WHERE id = $1
-    `, [req.user!.userId]);
+    const result = await db.select().from(users)
+      .where(eq(users.id, req.user!.userId));
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(result.rows[0]);
+    const user = result[0];
+    const { password_hash, ...profileWithoutPassword } = user;
+    res.json(profileWithoutPassword);
   } catch (error) {
     console.error('Profile fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
 
-// Get user profile by id
+// Get user profile by ID
 router.get('/profile/:userId', async (req, res) => {
   try {
-    const result = await query(`
-      SELECT id, username, email, name, pseudonym, role, summary, short_summary, socials, profile_image_path, banner_image_path, created_at, updated_at
-      FROM users 
-      WHERE id = $1
-    `, [req.params.userId]);
+    const result = await db.select().from(users)
+      .where(eq(users.id, parseInt(req.params.userId)));
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.status(200).json(result.rows[0]);
+    const user = result[0];
+    const { password_hash, ...profileWithoutPassword } = user;
+    res.status(200).json(profileWithoutPassword);
   } catch (error) {
     console.error('Profile fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
@@ -127,45 +109,50 @@ router.put('/profile', authenticateToken, async (req, res) => {
     const { email, name, pseudonym, role, summary, short_summary, socials } = req.body;
     const userId = req.user!.userId;
 
-    // Validate email if provided
     if (email && !validator.isEmail(email)) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    // Validate socials array
     if (socials && !Array.isArray(socials)) {
       return res.status(400).json({ error: 'Socials must be an array of strings' });
     }
 
-    // Check if email is already taken by another user
     if (email) {
-      const existingUser = await query(
-        `SELECT id FROM users WHERE email = $1 AND id != $2`,
-        [email, userId]
-      );
+      const existingUser = await db.select().from(users)
+        .where(and(eq(users.email, email), ne(users.id, userId)));
 
-      if (existingUser.rows.length > 0) {
+      if (existingUser.length > 0) {
         return res.status(409).json({ error: 'Email already in use' });
       }
     }
 
-    const result = await query(`
-      UPDATE users 
-      SET email = COALESCE($2, email),
-          name = $3,
-          pseudonym = $4,
-          role = $5,
-          summary = $6,
-          short_summary = $7,
-          socials = $8,
-          updated_at = NOW()
-      WHERE id = $1
-      RETURNING id, username, email, name, pseudonym, role, summary, short_summary, socials, profile_image_path, banner_image_path, created_at, updated_at
-    `, [userId, email, name, pseudonym, role, summary, short_summary, socials]);
+    const updateFields: any = {
+      name: name !== undefined ? name : undefined,
+      pseudonym: pseudonym !== undefined ? pseudonym : undefined,
+      role: role !== undefined ? role : undefined,
+      summary: summary !== undefined ? summary : undefined,
+      short_summary: short_summary !== undefined ? short_summary : undefined,
+      socials: socials !== undefined ? socials : undefined,
+      updated_at: new Date()
+    };
+
+    if (email) {
+      updateFields.email = email;
+    }
+
+    Object.keys(updateFields).forEach(key => updateFields[key] === undefined && delete updateFields[key]);
+
+    const result = await db.update(users)
+      .set(updateFields)
+      .where(eq(users.id, userId))
+      .returning();
+
+    const updatedUser = result[0];
+    const { password_hash, ...profileWithoutPassword } = updatedUser;
 
     res.status(201).json({
       message: 'Profile updated successfully',
-      user: result.rows[0]
+      user: profileWithoutPassword
     });
   } catch (error) {
     console.error('Profile update error:', error);
@@ -187,28 +174,23 @@ router.put('/password', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'New password must be at least 6 characters long' });
     }
 
-    // Get current password hash
-    const userResult = await query(`SELECT password_hash FROM users WHERE id = $1`, [userId]);
+    const userResult = await db.select({ password_hash: users.password_hash }).from(users)
+      .where(eq(users.id, userId));
 
-    if (userResult.rows.length === 0) {
+    if (userResult.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Verify current password
-    const isValidPassword = await comparePassword(currentPassword, userResult.rows[0].password_hash);
+    const isValidPassword = await comparePassword(currentPassword, userResult[0].password_hash);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
-    // Hash new password
     const newPasswordHash = await hashPassword(newPassword);
 
-    // Update password
-    await query(`
-      UPDATE users 
-      SET password_hash = $2, updated_at = NOW()
-      WHERE id = $1
-    `, [userId, newPasswordHash]);
+    await db.update(users)
+      .set({ password_hash: newPasswordHash, updated_at: new Date() })
+      .where(eq(users.id, userId));
 
     res.status(201).json({ message: 'Password updated successfully' });
   } catch (error) {
@@ -226,29 +208,28 @@ router.post('/profile/image', authenticateToken, upload.single('image'), async (
 
     const userId = req.user!.userId;
 
-    // Get user to determine username for folder structure
-    const userResult = await query(`SELECT username FROM users WHERE id = $1`, [userId]);
-    if (userResult.rows.length === 0) {
+    const userResult = await db.select({ username: users.username }).from(users)
+      .where(eq(users.id, userId));
+    if (userResult.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const username = userResult.rows[0].username;
+    const username = userResult[0].username;
     const fileName = `profile_${Date.now()}_${req.file.originalname}`;
 
-    // Upload to R2
     const uploadResult = await uploadProfileImageToR2(req.file.buffer, fileName, username);
 
-    // Update user profile with new image path
-    const result = await query(`
-      UPDATE users 
-      SET profile_image_path = $2, updated_at = NOW()
-      WHERE id = $1
-      RETURNING id, username, email, name, pseudonym, role, summary, short_summary, socials, profile_image_path, banner_image_path, created_at, updated_at
-    `, [userId, uploadResult.url]);
+    const result = await db.update(users)
+      .set({ profile_image_path: uploadResult.url, updated_at: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+
+    const updatedUser = result[0];
+    const { password_hash, ...profileWithoutPassword } = updatedUser;
 
     res.status(201).json({
       message: 'Profile image uploaded successfully',
-      user: result.rows[0],
+      user: profileWithoutPassword,
       imageUrl: uploadResult.url
     });
   } catch (error) {
@@ -266,29 +247,28 @@ router.post('/profile/banner', authenticateToken, upload.single('image'), async 
 
     const userId = req.user!.userId;
 
-    // Get user to determine username for folder structure
-    const userResult = await query(`SELECT username FROM users WHERE id = $1`, [userId]);
-    if (userResult.rows.length === 0) {
+    const userResult = await db.select({ username: users.username }).from(users)
+      .where(eq(users.id, userId));
+    if (userResult.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const username = userResult.rows[0].username;
+    const username = userResult[0].username;
     const fileName = `banner_${Date.now()}_${req.file.originalname}`;
 
-    // Upload to R2
     const uploadResult = await uploadProfileImageToR2(req.file.buffer, fileName, username);
 
-    // Update user profile with new banner image path
-    const result = await query(`
-      UPDATE users 
-      SET banner_image_path = $2, updated_at = NOW()
-      WHERE id = $1
-      RETURNING id, username, email, name, pseudonym, role, summary, short_summary, socials, profile_image_path, banner_image_path, created_at, updated_at
-    `, [userId, uploadResult.url]);
+    const result = await db.update(users)
+      .set({ banner_image_path: uploadResult.url, updated_at: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+
+    const updatedUser = result[0];
+    const { password_hash, ...profileWithoutPassword } = updatedUser;
 
     res.status(201).json({
       message: 'Banner image uploaded successfully',
-      user: result.rows[0],
+      user: profileWithoutPassword,
       imageUrl: uploadResult.url
     });
   } catch (error) {
@@ -297,7 +277,7 @@ router.post('/profile/banner', authenticateToken, upload.single('image'), async 
   }
 });
 
-// Contact form endpoint with spam prevention
+// Contact form endpoint
 router.post('/contact', async (req, res) => {
   try {
     const { name, email, subject, message, honeypot } = req.body;
@@ -319,18 +299,16 @@ router.post('/contact', async (req, res) => {
       return res.status(400).json({ error: 'Message must be at least 10 characters long' });
     }
 
-    // Rate limiting check - prevent too many submissions globally
-    const recentSubmissions = await query(`
-      SELECT COUNT(*) as count 
-      FROM contact_messages 
-      WHERE created_at > NOW() - INTERVAL '1 hour'
-    `);
+    // Rate limit
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentSubmissions = await db.select({ value: count() }).from(contactMessages)
+      .where(gt(contactMessages.created_at, oneHourAgo));
 
-    if (recentSubmissions.rows[0].count >= 5) {
+    if (recentSubmissions[0].value >= 5) {
       return res.status(429).json({ error: 'Too many submissions. Please try again later.' });
     }
 
-    // Simple spam detection - check for suspicious patterns
+    // Simple spam detection with check for suspicious patterns
     const suspiciousPatterns = [
       /https?:\/\//gi, // URLs in message
       /\b(viagra|casino|lottery|winner|prize|click here|free money)\b/gi, // Common spam words
@@ -344,12 +322,15 @@ router.post('/contact', async (req, res) => {
       }
     }
 
-    // Store contact message in database
-    const result = await query(`
-      INSERT INTO contact_messages (name, email, subject, message, created_at)
-      VALUES ($1, $2, $3, $4, NOW())
-      RETURNING id, name, email, subject, message, created_at
-    `, [name, email, subject || null, message]);
+    const result = await db.insert(contactMessages)
+      .values({
+        name,
+        email,
+        subject: subject || null,
+        message,
+        created_at: new Date()
+      })
+      .returning();
 
     // Send email notification
     try {
@@ -361,12 +342,11 @@ router.post('/contact', async (req, res) => {
       });
     } catch (emailError) {
       console.error('Email sending failed:', emailError);
-      // Don't fail the request if email fails, just log it
     }
 
     res.status(201).json({
       message: 'Contact message sent successfully',
-      contact: result.rows[0]
+      contact: result[0]
     });
   } catch (error) {
     console.error('Contact form error:', error);

@@ -15,7 +15,7 @@ export const upload = multer({
 
 export const videoUpload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit for videos
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowedMimeTypes = [
       'video/mp4',
@@ -28,6 +28,25 @@ export const videoUpload = multer({
       cb(null, true);
     } else {
       cb(new Error('Only video files are allowed'));
+    }
+  },
+});
+
+export const animationUpload = multer({
+  storage,
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedMimeTypes = [
+      'video/mp4',
+      'video/mpeg',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/webm'
+    ];
+    if (allowedMimeTypes.includes(file.mimetype) || file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video files and cover images are allowed'));
     }
   },
 });

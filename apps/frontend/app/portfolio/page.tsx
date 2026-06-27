@@ -15,6 +15,7 @@ interface PortfolioItemData {
   type: 'project' | 'artwork';
   image: string;
   images?: string[];
+  slug?: string | null;
 }
 
 export default function Portfolio() {
@@ -24,18 +25,13 @@ export default function Portfolio() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
         setError(null);
 
-        // Fetch projects and portfolio artworks using API filters
-        const [projects, artworks] = await Promise.all([
-          getProjects(1, 1, 100, 'portfolio'),
-          getArtworks(1, 1, 100, 'portfolio')
-        ]);
+        const projects = await getProjects(1, 1, 100);
 
         const combinedData: PortfolioItemData[] = [
           ...projects.data.map((project: Project) => ({
@@ -44,16 +40,9 @@ export default function Portfolio() {
             description: project.description,
             categories: project.project_categories?.map(cat => cat.category.name) || ['Uncategorized'],
             type: 'project' as const,
-            image: project.batch_image_path?.[0] || '',
-            images: project.batch_image_path || []
-          })),
-          ...artworks.data.map((artwork: Artwork) => ({
-            id: artwork.id,
-            title: artwork.title,
-            description: artwork.description,
-            categories: artwork.artwork_categories?.map(cat => cat.category.name) || ['Uncategorized'],
-            type: 'artwork' as const,
-            image: artwork.image_path
+            image: project.cover_image_path || '',
+            images: project.batch_image_path || [],
+            slug: project.slug
           }))
         ];
 
@@ -68,7 +57,6 @@ export default function Portfolio() {
 
     fetchData();
   }, []);
-
 
   const categories = useMemo(() => {
     const allCategories = portfolioData.flatMap(item => item.categories);
@@ -147,7 +135,7 @@ export default function Portfolio() {
             </div>
           </div>
 
-          {/* Portfolio Grid */}
+          {/* Portfolio */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-12">
             {filteredItems.map((item) => (
               <PortfolioItem
@@ -159,6 +147,7 @@ export default function Portfolio() {
                 type={item.type}
                 image={item.image}
                 images={item.images}
+                slug={item.slug}
               />
             ))}
           </div>

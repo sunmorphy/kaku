@@ -13,12 +13,11 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
     return (
         <Card className="overflow-hidden">
             <div className="aspect-video bg-gray-100 relative">
-                {/* Image count badge in top-right */}
                 <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm z-10">
                     {project.batch_image_path.length} image{project.batch_image_path.length > 1 ? 's' : ''}
                 </div>
                 <img
-                    src={project.batch_image_path[0]}
+                    src={project.cover_image_path ? project.cover_image_path : '/placeholder-image.svg'}
                     alt={project.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -34,8 +33,8 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
                                 {project.title}
                             </h3>
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${project.type === 'portfolio'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-purple-100 text-purple-700'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-purple-100 text-purple-700'
                                 }`}>
                                 {project.type}
                             </span>

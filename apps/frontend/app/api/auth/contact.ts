@@ -1,18 +1,16 @@
 import { devLog } from '@/app/utils/utils';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Simple in-memory rate limiter
 const rateLimit = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
 const MAX_ATTEMPTS = 3; // Max 3 attempts per 15 minutes
 
-// Contact form data interface
 interface ContactFormData {
   name: string;
   email: string;
   subject: string;
   message: string;
-  honeypot: string; // Honeypot field - should always be empty for legitimate users
+  honeypot: string; // Honeypot field
 }
 
 // Validate form data
@@ -32,7 +30,7 @@ function validateFormData(data: any): data is ContactFormData {
   );
 }
 
-// Rate limiting function
+// Rate limit
 function checkRateLimit(clientIP: string): { allowed: boolean; resetTime?: number } {
   const now = Date.now();
   const clientData = rateLimit.get(clientIP);
@@ -45,7 +43,6 @@ function checkRateLimit(clientIP: string): { allowed: boolean; resetTime?: numbe
   const current = rateLimit.get(clientIP);
 
   if (!current) {
-    // First request from this IP
     rateLimit.set(clientIP, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
     return { allowed: true };
   }
@@ -55,29 +52,28 @@ function checkRateLimit(clientIP: string): { allowed: boolean; resetTime?: numbe
     return { allowed: false, resetTime: current.resetTime };
   }
 
-  // Increment count
   current.count += 1;
   rateLimit.set(clientIP, current);
   return { allowed: true };
 }
 
-// Get client IP address
+// Get client IP
 function getClientIP(request: NextRequest): string {
   const forwardedFor = request.headers.get('x-forwarded-for');
   const realIP = request.headers.get('x-real-ip');
-  
+
   if (forwardedFor) {
     return forwardedFor.split(',')[0].trim();
   }
-  
+
   if (realIP) {
     return realIP;
   }
-  
+
   return 'unknown';
 }
 
-// Validate honeypot - if filled, it's likely a bot
+// Validate honeypot
 function validateHoneypot(honeypot: string): { valid: boolean; error?: string } {
   if (honeypot.trim()) {
     return { valid: false, error: 'Bot detected. Access denied.' };
@@ -85,20 +81,17 @@ function validateHoneypot(honeypot: string): { valid: boolean; error?: string } 
   return { valid: true };
 }
 
-
-// POST handler for contact form
 export async function POST(request: NextRequest) {
   try {
-    // Check rate limiting
     const clientIP = getClientIP(request);
     const rateLimitResult = checkRateLimit(clientIP);
-    
+
     if (!rateLimitResult.allowed) {
       const resetTime = rateLimitResult.resetTime;
       const waitTime = resetTime ? Math.ceil((resetTime - Date.now()) / 1000 / 60) : 15;
-      
+
       return NextResponse.json(
-        { 
+        {
           error: `Too many attempts. Please try again in ${waitTime} minutes.`,
           rateLimited: true
         },
@@ -106,10 +99,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse form data
     const body = await request.json();
-    
-    // Validate form data
+
     if (!validateFormData(body)) {
       return NextResponse.json(
         { error: 'Invalid form data. Please fill in all fields with valid information.' },
@@ -119,7 +110,6 @@ export async function POST(request: NextRequest) {
 
     const { name, email, subject, message, honeypot } = body;
 
-    // Validate honeypot - if filled, it's likely a bot
     const honeypotResult = validateHoneypot(honeypot);
     if (!honeypotResult.valid) {
       // Log bot attempt for monitoring
@@ -130,10 +120,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Additional server-side validation for suspicious patterns
     const suspiciousPatterns = [
-      /https?:\/\/[^\s]+/gi, // URLs in message
-      /<[^>]*>/g, // HTML tags
+      /https?:\/\/[^\s]+/gi,
+      /<[^>]*>/g,
       /\b(viagra|casino|lottery|winner|congratulations|click here|free money)\b/gi
     ];
 
@@ -145,29 +134,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log contact form submission (backend handles actual email sending)
     devLog('Contact form submission received:', {
       name,
       email,
       subject,
-      message: message.substring(0, 100) + '...', // Log truncated message for privacy
+      message: message.substring(0, 100) + '...',
       timestamp: new Date().toISOString(),
       ip: clientIP
     })
 
     return NextResponse.json(
-      { 
+      {
         message: 'Message sent successfully! Thank you for reaching out.',
-        success: true 
+        success: true
       },
       { status: 200 }
     );
 
   } catch (error) {
     devLog('Contact form error:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to process message. Please try again later or contact directly via email.',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
       },
@@ -176,10 +164,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET handler (optional - for testing)
 export async function GET() {
   return NextResponse.json(
-    { 
+    {
       message: 'Contact API endpoint is working',
       timestamp: new Date().toISOString(),
       rateLimiting: 'Active',

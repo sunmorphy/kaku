@@ -16,7 +16,6 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(cors());
 
-// Apply JSON and URL-encoded parsing only to non-file-upload routes
 app.use('/api/auth', express.json({ limit: '25mb' }));
 app.use('/api/auth', express.urlencoded({ extended: true, limit: '25mb' }));
 app.use('/api/categories', express.json({ limit: '25mb' }));

@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Ensure environment variables are loaded
 if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY || !process.env.R2_BUCKET_NAME) {
     console.error("Missing required R2 environment variables. Please check your .env file.");
 }
@@ -34,14 +33,14 @@ export interface R2UploadResult {
 
 export const uploadToR2 = async (file: Buffer, fileName: string, username: string, subFolder?: string): Promise<R2UploadResult> => {
     try {
-        // Sanitize filename to make it URL-safe
+        // Sanitize filename
         const sanitizedFileName = sanitizeFileName(fileName);
         const folderPath = subFolder ? `${username}/${subFolder}` : username;
         const filePath = `${folderPath}/${sanitizedFileName}`;
         const bucketName = process.env.R2_BUCKET_NAME!;
         const publicUrl = process.env.R2_PUBLIC_URL!;
 
-        // Determine content type based on file extension
+        // Determine content type
         const contentType = getContentType(fileName);
 
         const command = new PutObjectCommand({
@@ -76,13 +75,13 @@ export const uploadToR2 = async (file: Buffer, fileName: string, username: strin
 
 export const uploadProfileImageToR2 = async (file: Buffer, fileName: string, username: string): Promise<R2UploadResult> => {
     try {
-        // Sanitize filename to make it URL-safe
+        // Sanitize filename
         const sanitizedFileName = sanitizeFileName(fileName);
         const filePath = `${username}/${sanitizedFileName}`;
         const bucketName = process.env.R2_BUCKET_NAME!;
         const publicUrl = process.env.R2_PUBLIC_URL!;
 
-        // Determine content type based on file extension
+        // Determine content type
         const contentType = getContentType(fileName);
 
         const command = new PutObjectCommand({
@@ -115,11 +114,8 @@ export const uploadProfileImageToR2 = async (file: Buffer, fileName: string, use
     }
 };
 
-// Helper function to sanitize filename for URL-safe storage
+// Helper function to sanitize filename
 function sanitizeFileName(fileName: string): string {
-    // Replace spaces with hyphens
-    // Remove or replace special characters
-    // Keep only alphanumeric, hyphens, underscores, and dots
     return fileName
         .replace(/\s+/g, '-')  // Replace spaces with hyphens
         .replace(/[^\w\-\.]/g, '')  // Remove special characters except hyphen, underscore, dot
@@ -127,7 +123,7 @@ function sanitizeFileName(fileName: string): string {
         .toLowerCase();  // Convert to lowercase for consistency
 }
 
-// Helper function to determine content type from file extension
+// Helper function to determine content type
 function getContentType(fileName: string): string {
     const extension = fileName.split('.').pop()?.toLowerCase();
 

@@ -17,8 +17,8 @@ export const personSchema = {
   "name": "Rahma Dwin",
   "alternateName": ["Rahma Dwin", "Rahma Dwi Nanda", "Kaku"],
   "jobTitle": "2D Artist",
-  "url": process.env.NEXT_PUBLIC_SITE_URL || "https://rahmadwin.art",
-  "mainEntityOfPage": process.env.NEXT_PUBLIC_SITE_URL || "https://rahmadwin.art",
+  "url": process.env.NEXT_PUBLIC_SITE_URL,
+  "mainEntityOfPage": process.env.NEXT_PUBLIC_SITE_URL,
   "sameAs": [
     // These will be populated dynamically from profile data
   ],
@@ -34,7 +34,8 @@ export const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "Website",
   "name": "Rahma Dwin Portfolio",
-  "url": process.env.NEXT_PUBLIC_SITE_URL || "https://rahmadwin.art",
+  "alternateName": ["Rahma Dwin", "Rahma", "Kaku", "Portfolio"],
+  "url": process.env.NEXT_PUBLIC_SITE_URL,
   "description": "Rahma Dwin's portfolio.",
   "author": {
     "@type": "Person",

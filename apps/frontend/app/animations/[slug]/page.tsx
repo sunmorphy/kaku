@@ -3,19 +3,19 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getAnimation, type Animation } from '../../lib/api';
+import { getAnimation, type Animation as KakuAnimation } from '../../lib/api';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import { devLog } from '@/app/utils/utils';
 
 interface Props {
-    params: Promise<{ id: string }>;
+    params: Promise<{ slug: string }>;
 }
 
 export default function AnimationDetail({ params }: Props) {
-    const [animation, setAnimation] = useState<Animation | null>(null);
+    const [animation, setAnimation] = useState<KakuAnimation | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
+    const [resolvedParams, setResolvedParams] = useState<{ slug: string } | null>(null);
 
     useEffect(() => {
         async function resolveParams() {
@@ -33,7 +33,7 @@ export default function AnimationDetail({ params }: Props) {
                 setLoading(true);
                 setError(null);
 
-                const animationData = await getAnimation(resolvedParams!!.id);
+                const animationData = await getAnimation(resolvedParams!!.slug);
 
                 if (animationData) {
                     setAnimation(animationData);
@@ -79,14 +79,12 @@ export default function AnimationDetail({ params }: Props) {
                         <div className="flex justify-between items-start mb-4">
                             <div className='flex flex-col space-y-4'>
                                 <h1 className="text-4xl font-bold">{animation.title}</h1>
-                                {/* Description */}
                                 {animation.description && (
                                     <div>
                                         <p className="text-gray-700 leading-relaxed">{animation.description}</p>
                                     </div>
                                 )}
 
-                                {/* Categories */}
                                 <div className="flex flex-wrap gap-2">
                                     {animation.animation_categories?.map((cat, index) => (
                                         <span

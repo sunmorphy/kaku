@@ -10,9 +10,10 @@ interface PortfolioItemProps {
   type: 'project' | 'artwork';
   image: string;
   images?: string[];
+  slug?: string | null;
 }
 
-export default function PortfolioItem({ id, title, description, categories, type, image, images }: PortfolioItemProps) {
+export default function PortfolioItem({ id, title, description, categories, type, image, images, slug }: PortfolioItemProps) {
   const isProject = type === 'project';
   const totalImages = images?.length || 1;
 
@@ -69,7 +70,7 @@ export default function PortfolioItem({ id, title, description, categories, type
   };
 
   return (
-    <Link key={id} href={`/portfolio/${id}?type=${type}`}>
+    <Link key={id} href={`/portfolio/${slug}?type=${type}`}>
       <motion.div
         className="cursor-pointer p-1"
         variants={cardVariants}
@@ -83,7 +84,6 @@ export default function PortfolioItem({ id, title, description, categories, type
         }}
       >
         {isProject && images && images.length > 1 ? (
-          // Project with multiple images - show 2 images side by side
           <motion.div className="relative w-full h-96 overflow-hidden rounded-2xl bg-gray-100 flex border-2 border-transparent">
             <motion.div
               className="relative w-1/2 h-full overflow-hidden"
@@ -145,7 +145,6 @@ export default function PortfolioItem({ id, title, description, categories, type
               variants={overlayVariants}
             />
 
-            {/* Animated border glow */}
             <motion.div
               className="absolute inset-0 rounded-2xl border-2 border-primary/20"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -158,7 +157,6 @@ export default function PortfolioItem({ id, title, description, categories, type
             />
           </motion.div>
         ) : (
-          // Single image for artworks or single-image projects
           <motion.div className="relative w-full h-96 overflow-hidden rounded-2xl bg-gray-100 border-2 border-transparent">
             <motion.img
               src={image}
@@ -171,7 +169,6 @@ export default function PortfolioItem({ id, title, description, categories, type
               variants={overlayVariants}
             />
 
-            {/* Animated border glow */}
             <motion.div
               className="absolute inset-0 rounded-2xl border-2 border-primary/20"
               initial={{ opacity: 0, scale: 0.95 }}

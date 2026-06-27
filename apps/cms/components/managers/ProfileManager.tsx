@@ -57,13 +57,13 @@ export default function ProfileManager() {
     try {
       const element = document.createElement('i')
       element.className = `ph-${iconName.toLowerCase()}`
-      return true // Phosphor will handle invalid icons gracefully
+      return true
     } catch {
       return false
     }
   }
 
-  // Parse social string (icon|url format)
+  // Parse social string
   const parseSocialString = (socialString: string): { icon: string; url: string } => {
     const parts = socialString.split('|')
     if (parts.length === 2) {
@@ -72,7 +72,7 @@ export default function ProfileManager() {
     return { icon: '', url: socialString }
   }
 
-  // Format social string for API (icon|url format)
+  // Format social string for API
   const formatSocialString = (icon: string, url: string): string => {
     if (icon.trim()) {
       return `${icon.trim()}|${url.trim()}`

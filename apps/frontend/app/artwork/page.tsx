@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Image } from '@imagekit/next';
+import Image from 'next/image';
 import ArtworkItem from '../components/ArtworkItem';
 import { getArtworks, getProjects, type Artwork, type Project } from '../lib/api';
 import LoadingAnimation from '../components/LoadingAnimation';
@@ -32,30 +32,18 @@ export default function Artwork() {
         setLoading(true);
         setError(null);
 
-        // Fetch artworks and projects using API filters
-        const [artworks, projects] = await Promise.all([
-          getArtworks(1, 1, 100, 'scratch'),
-          getProjects(1, 1, 100, 'scratch')
-        ]);
+        // Fetch artworks using API
+        const artworks = await getArtworks(1, 1, 100);
 
         // Combine both into unified data structure
         const artworkItems: ArtworkItemData[] = [
           ...artworks.data.map((artwork: Artwork) => ({
             id: artwork.id,
-            title: artwork.title,
-            categories: artwork.artwork_categories?.map(cat => cat.category.name) || ['Uncategorized'],
+            title: artwork.title || 'Untitled',
+            categories: artwork.artwork_categories?.map(cat => cat.category.name) || [],
             image: artwork.image_path,
             description: artwork.description || '',
             type: 'artwork' as const
-          })),
-          ...projects.data.map((project: Project) => ({
-            id: project.id,
-            title: project.title,
-            categories: project.project_categories?.map(cat => cat.category.name) || ['Uncategorized'],
-            image: project.batch_image_path?.[0] || '',
-            images: project.batch_image_path || [],
-            description: project.description || '',
-            type: 'project' as const
           }))
         ];
 
@@ -85,7 +73,7 @@ export default function Artwork() {
 
   const openDialog = (index: number) => {
     setSelectedImageIndex(index);
-    setSelectedItemImageIndex(0); // Reset to first image when opening
+    setSelectedItemImageIndex(0);
     setIsDialogOpen(true);
   };
 
@@ -104,24 +92,9 @@ export default function Artwork() {
       : (selectedImageIndex + 1) % filteredItems.length;
 
     setSelectedImageIndex(newIndex);
-    setSelectedItemImageIndex(0); // Reset to first image when changing items
+    setSelectedItemImageIndex(0);
   };
 
-  // Navigate within project images
-  const navigateItemImage = (direction: 'prev' | 'next') => {
-    if (selectedImageIndex === null) return;
-
-    const currentItem = filteredItems[selectedImageIndex];
-    const totalImages = currentItem.images?.length || 1;
-
-    const newIndex = direction === 'prev'
-      ? (selectedItemImageIndex - 1 + totalImages) % totalImages
-      : (selectedItemImageIndex + 1) % totalImages;
-
-    setSelectedItemImageIndex(newIndex);
-  };
-
-  // State for expanded grid view
   const [isGridExpanded, setIsGridExpanded] = useState(false);
 
   const toggleGridView = () => {
@@ -195,7 +168,7 @@ export default function Artwork() {
           </div>
         </div>
 
-        {/* Artwork Grid */}
+        {/* Artworks */}
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredItems.map((item, index) => (
             <ArtworkItem
@@ -218,18 +191,13 @@ export default function Artwork() {
         )}
       </div>
 
-
-
-      {/* Image Preview Dialog - Fullscreen with Glass Effect */}
+      {/* Image Preview Dialog */}
       {isDialogOpen && selectedImageIndex !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={closeDialog}>
-          {/* Glass Effect Background */}
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-white-500/10 to-white-500/20" />
           <div className="absolute inset-0 backdrop-blur-3xl bg-black/30" />
 
-          {/* Content Container */}
           <div className="relative z-10 w-full h-full flex items-center justify-center p-4 md:p-8" onClick={(e) => e.stopPropagation()}>
-            {/* Close Button */}
             <button
               onClick={closeDialog}
               className="absolute top-4 right-4 md:top-8 md:right-8 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full p-3 transition-all shadow-lg border border-white/20"
@@ -264,20 +232,19 @@ export default function Artwork() {
             {/* Main Content */}
             <div className="w-full max-w-6xl h-full flex flex-col items-center justify-center">
               {filteredItems[selectedImageIndex].type === 'artwork' ? (
-                /* ARTWORK: Single Image View */
                 <div className="flex flex-col items-center w-full h-full justify-center space-y-6">
                   <div className="flex-1 flex items-center justify-center w-full max-h-[70vh]">
-                    <Image
-                      urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
-                      src={filteredItems[selectedImageIndex].image}
-                      alt={filteredItems[selectedImageIndex].title}
-                      width={1200}
-                      height={800}
-                      className="object-contain max-h-full w-auto rounded-lg shadow-2xl"
-                    />
+                    {filteredItems[selectedImageIndex].image && (
+                      <Image
+                        src={filteredItems[selectedImageIndex].image}
+                        alt={filteredItems[selectedImageIndex].title}
+                        width={1200}
+                        height={800}
+                        className="object-contain max-h-full w-auto rounded-lg shadow-2xl"
+                      />
+                    )}
                   </div>
 
-                  {/* Title and Description */}
                   <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 max-w-2xl border border-white/20">
                     <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
                       {filteredItems[selectedImageIndex].title}
@@ -297,15 +264,12 @@ export default function Artwork() {
                   </div>
                 </div>
               ) : (
-                /* PROJECT: Layered Stack or Grid View */
                 !isGridExpanded ? (
-                  /* Layered Stack Preview */
                   <div className="flex flex-col items-center w-full h-full justify-center space-y-6">
                     <div
                       className="relative cursor-pointer group"
                       onClick={toggleGridView}
                     >
-                      {/* Stack of Images */}
                       <div className="relative w-[300px] h-[300px] md:w-[400px] md:h-[400px]">
                         {filteredItems[selectedImageIndex].images?.slice(0, 3).map((img, index) => (
                           <div
@@ -324,7 +288,6 @@ export default function Artwork() {
                           </div>
                         ))}
 
-                        {/* Count Badge */}
                         {filteredItems[selectedImageIndex].images && filteredItems[selectedImageIndex].images!.length > 3 && (
                           <div className="absolute -bottom-4 -right-4 bg-primary text-white rounded-full w-16 h-16 flex items-center justify-center text-xl font-bold shadow-lg border-4 border-white z-10">
                             +{filteredItems[selectedImageIndex].images!.length - 3}
@@ -332,7 +295,6 @@ export default function Artwork() {
                         )}
                       </div>
 
-                      {/* Click to Expand Hint */}
                       <div className="mt-8 bg-white/10 backdrop-blur-md rounded-full px-6 py-3 border border-white/20 group-hover:bg-white/20 transition-all">
                         <p className="text-white font-semibold flex items-center gap-2">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -343,7 +305,6 @@ export default function Artwork() {
                       </div>
                     </div>
 
-                    {/* Title and Description */}
                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 max-w-2xl border border-white/20">
                       <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
                         {filteredItems[selectedImageIndex].title}
@@ -363,9 +324,7 @@ export default function Artwork() {
                     </div>
                   </div>
                 ) : (
-                  /* Expanded Grid View - Scrollable */
                   <div className="w-full h-full flex flex-col">
-                    {/* Header with Title and Back Button */}
                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 mb-4 border border-white/20 flex-shrink-0">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
@@ -397,7 +356,6 @@ export default function Artwork() {
                       </div>
                     </div>
 
-                    {/* Scrollable Grid */}
                     <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                       <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
                         {filteredItems[selectedImageIndex].images?.map((img, index) => (
@@ -424,7 +382,6 @@ export default function Artwork() {
               )}
             </div>
 
-            {/* Item Counter */}
             {filteredItems.length > 1 && (
               <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-semibold border border-white/20">
                 {selectedImageIndex + 1} / {filteredItems.length}

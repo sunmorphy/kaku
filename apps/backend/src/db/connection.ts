@@ -1,19 +1,10 @@
-import { Pool } from 'pg';
+import { neon } from '@neondatabase/serverless';
 import dotenv from 'dotenv';
+import { drizzle } from 'drizzle-orm/neon-http';
+import * as schema from './schema';
 
 dotenv.config();
 
-export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+const sql = neon(process.env.DATABASE_URL!);
 
-export const query = async (text: string, params?: any[]) => {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(text, params);
-    return result;
-  } finally {
-    client.release();
-  }
-};
+export const db = drizzle(sql, { schema });

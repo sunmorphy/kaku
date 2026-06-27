@@ -47,7 +47,6 @@ export default function ContactForm() {
       setStatus({ type: 'error', message: 'Please enter your message.' });
       return false;
     }
-    // Honeypot validation - if filled, it's likely a bot
     if (formData.honeypot.trim()) {
       setStatus({ type: 'error', message: 'Spam detected. Please try again.' });
       return false;
@@ -70,7 +69,6 @@ export default function ContactForm() {
         message: result.message || 'Message sent successfully!'
       });
 
-      // Reset form
       setFormData({
         name: '',
         email: '',
@@ -105,7 +103,6 @@ export default function ContactForm() {
       </h3>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Name and Email Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -142,7 +139,6 @@ export default function ContactForm() {
           </div>
         </div>
 
-        {/* Subject */}
         <div>
           <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
             Subject *
@@ -160,7 +156,6 @@ export default function ContactForm() {
           />
         </div>
 
-        {/* Message */}
         <div>
           <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
             Message *
@@ -178,7 +173,6 @@ export default function ContactForm() {
           />
         </div>
 
-        {/* Honeypot field - hidden from users, bots will fill it */}
         <div style={{ position: 'absolute', left: '-9999px', opacity: 0, pointerEvents: 'none' }}>
           <label htmlFor="website">Please leave this field empty:</label>
           <input
@@ -193,7 +187,6 @@ export default function ContactForm() {
           />
         </div>
 
-        {/* Status Messages */}
         {status.message && (
           <div className={`p-4 rounded-lg flex items-center gap-2 ${status.type === 'success' ? 'bg-green-50 text-green-700' :
             status.type === 'error' ? 'bg-red-50 text-red-700' :
@@ -207,7 +200,6 @@ export default function ContactForm() {
           </div>
         )}
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={status.type === 'loading'}

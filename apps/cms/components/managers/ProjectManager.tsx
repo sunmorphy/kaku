@@ -10,6 +10,7 @@ import { apiRequest, compressImage } from '@/lib/utils'
 import { Project, Category } from '@/types'
 import { ConfirmDialog } from '@/components/ui/dialog'
 import { ProjectCard } from '@/components/cards'
+import { generateSlug } from '@/utils/slug'
 
 export default function ProjectManager() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -23,18 +24,20 @@ export default function ProjectManager() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([])
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
-  const [selectedType, setSelectedType] = useState<'all' | 'portfolio' | 'scratch'>('all')
-  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
+
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 25
   const [formData, setFormData] = useState({
+    coverImage: null as File | null,
     title: '',
     description: '',
+    slug: '',
     categoryIds: [] as number[],
     images: [] as File[],
     type: 'portfolio' as 'portfolio' | 'scratch',
     published: true,
   })
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [existingImages, setExistingImages] = useState<string[]>([]) // Track original images from server
   const [removedImageIndices, setRemovedImageIndices] = useState<Set<number>>(new Set()) // Track which original images to remove
@@ -51,7 +54,7 @@ export default function ProjectManager() {
 
   useEffect(() => {
     fetchProjects()
-  }, [currentPage, searchTerm, selectedCategoryIds, selectedType])
+  }, [currentPage, searchTerm, selectedCategoryIds])
 
 
   const fetchProjects = async () => {
@@ -70,9 +73,7 @@ export default function ProjectManager() {
         params.append('categoryIds', JSON.stringify(selectedCategoryIds))
       }
 
-      if (selectedType !== 'all') {
-        params.append('type', selectedType)
-      }
+
 
       const response = await apiRequest<{
         data: Project[]
@@ -109,11 +110,13 @@ export default function ProjectManager() {
   }
 
   const createProject = async () => {
-    if (!formData.title.trim() || formData.images.length === 0) return
+    if (!formData.coverImage || !formData.title.trim() || formData.images.length === 0) return
 
     setSubmitting(true)
     try {
       const formDataToSend = new FormData()
+      const compressedCoverImage = await compressImage(formData.coverImage)
+      formDataToSend.append('coverImage', compressedCoverImage)
 
       // Compress all images and wait for completion
       const compressedImages = await Promise.all(
@@ -127,6 +130,7 @@ export default function ProjectManager() {
 
       formDataToSend.append('title', formData.title)
       formDataToSend.append('description', formData.description)
+      formDataToSend.append('slug', formData.slug)
       formDataToSend.append('categoryIds', JSON.stringify(formData.categoryIds))
       formDataToSend.append('type', formData.type)
       formDataToSend.append('published', formData.published.toString())
@@ -137,7 +141,7 @@ export default function ProjectManager() {
       })
 
       resetForm()
-      await fetchProjects() // Refresh the list
+      await fetchProjects()
     } catch (error) {
       console.error('Failed to create project:', error)
     } finally {
@@ -151,6 +155,11 @@ export default function ProjectManager() {
     setSubmitting(true)
     try {
       const formDataToSend = new FormData()
+
+      if (formData.coverImage) {
+        const compressedCoverImage = await compressImage(formData.coverImage)
+        formDataToSend.append('coverImage', compressedCoverImage)
+      }
 
       // Compress modified images and wait for completion
       if (modifiedImages.size > 0) {
@@ -186,6 +195,7 @@ export default function ProjectManager() {
 
       formDataToSend.append('title', formData.title)
       formDataToSend.append('description', formData.description)
+      formDataToSend.append('slug', formData.slug)
       formDataToSend.append('categoryIds', JSON.stringify(formData.categoryIds))
       formDataToSend.append('type', formData.type)
       formDataToSend.append('published', formData.published.toString())
@@ -196,7 +206,7 @@ export default function ProjectManager() {
       })
 
       resetForm()
-      await fetchProjects() // Refresh the list
+      await fetchProjects()
     } catch (error) {
       console.error('Failed to update project:', error)
     } finally {
@@ -213,7 +223,7 @@ export default function ProjectManager() {
 
     try {
       await apiRequest(`/projects/${deleteDialog.projectId}`, { method: 'DELETE' })
-      await fetchProjects() // Refresh the list
+      await fetchProjects()
     } catch (error) {
       console.error('Failed to delete project:', error)
     } finally {
@@ -224,14 +234,15 @@ export default function ProjectManager() {
   const startEdit = (project: Project) => {
     setEditingId(project.id)
     setFormData({
+      coverImage: null,
       title: project.title,
       description: project.description || '',
-      categoryIds: project.project_categories.map(pc => pc.category.id),
+      slug: project.slug || '',
+      categoryIds: project.project_categories?.map(pc => pc.category.id) || [],
       images: [],
-      type: project.type || 'portfolio',
+      type: (project.type as 'portfolio' | 'scratch') || 'portfolio',
       published: project.published ?? true,
     })
-    // Initialize editing state for images
     setExistingImages(project.batch_image_path)
     setImagePreviews(project.batch_image_path)
     setRemovedImageIndices(new Set())
@@ -242,8 +253,10 @@ export default function ProjectManager() {
 
   const resetForm = () => {
     setFormData({
+      coverImage: null,
       title: '',
       description: '',
+      slug: '',
       categoryIds: [],
       images: [],
       type: 'portfolio',
@@ -267,21 +280,33 @@ export default function ProjectManager() {
     }))
   }
 
+  const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null
+    setFormData({ ...formData, coverImage: file })
+
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setCoverImagePreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    } else {
+      setCoverImagePreview(null)
+    }
+  }
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
     if (typeof index === 'number') {
-      // Single image replacement at specific index
       const file = files[0]
       const newPreviews = [...imagePreviews]
       const newModifiedImages = new Map(modifiedImages)
 
-      // Track this image as modified
       newModifiedImages.set(index, file)
       setModifiedImages(newModifiedImages)
 
-      // Generate preview for the new image
       const reader = new FileReader()
       reader.onload = (e) => {
         newPreviews[index] = e.target?.result as string
@@ -289,21 +314,17 @@ export default function ProjectManager() {
       }
       reader.readAsDataURL(file)
     } else {
-      // Multiple images added to the end
       const currentPreviewCount = imagePreviews.length
       const newPreviews = [...imagePreviews]
 
       if (editingId) {
-        // For editing: add to addedImages array
         const newAddedImages = [...addedImages, ...files]
         setAddedImages(newAddedImages)
       } else {
-        // For new project creation: add to formData.images
         const newImages = [...formData.images, ...files]
         setFormData({ ...formData, images: newImages })
       }
 
-      // Generate previews for all new files
       let loadedCount = 0
       files.forEach((file, fileIndex) => {
         const reader = new FileReader()
@@ -324,27 +345,22 @@ export default function ProjectManager() {
   const removeImage = (indexToRemove: number) => {
     if (editingId) {
       if (indexToRemove < existingImages.length) {
-        // This is an existing image - mark it for removal (don't actually remove from arrays)
         const newRemovedIndices = new Set(removedImageIndices)
         newRemovedIndices.add(indexToRemove)
         setRemovedImageIndices(newRemovedIndices)
 
-        // Remove from modified images if it was modified
         const newModifiedImages = new Map(modifiedImages)
         newModifiedImages.delete(indexToRemove)
         setModifiedImages(newModifiedImages)
       } else {
-        // This is a newly added image - actually remove it
         const addedImageIndex = indexToRemove - existingImages.length
         const newAddedImages = addedImages.filter((_, index) => index !== addedImageIndex)
         setAddedImages(newAddedImages)
 
-        // Remove from UI preview for added images
         const newPreviews = imagePreviews.filter((_, index) => index !== indexToRemove)
         setImagePreviews(newPreviews)
       }
     } else {
-      // For new project creation - remove from formData.images
       const newImages = formData.images.filter((_, index) => index !== indexToRemove)
       const newPreviews = imagePreviews.filter((_, index) => index !== indexToRemove)
 
@@ -353,10 +369,9 @@ export default function ProjectManager() {
     }
   }
 
-  // Reset to first page when search/filter changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, selectedCategoryIds, selectedType])
+  }, [searchTerm, selectedCategoryIds])
 
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems)
@@ -404,56 +419,7 @@ export default function ProjectManager() {
                 className="pl-10 w-full text-gray-900 placeholder-gray-500"
               />
             </div>
-            <div className="relative w-full sm:w-48">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <button
-                onClick={() => setTypeDropdownOpen(!typeDropdownOpen)}
-                className="pl-10 w-full h-10 px-3 py-2 border border-gray-300 bg-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-left text-gray-900 flex items-center justify-between"
-              >
-                <span className="truncate">
-                  {selectedType === 'all' ? 'All Types' : selectedType === 'portfolio' ? 'Portfolio' : 'Scratch'}
-                </span>
-                <svg className="w-4 h-4 text-gray-400 ml-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {typeDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg z-50">
-                  <div className="p-2">
-                    <button
-                      onClick={() => {
-                        setSelectedType('all')
-                        setTypeDropdownOpen(false)
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded transition-colors ${selectedType === 'all' ? 'bg-blue-50 text-blue-700' : 'text-gray-900'
-                        }`}
-                    >
-                      All Types
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedType('portfolio')
-                        setTypeDropdownOpen(false)
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded transition-colors ${selectedType === 'portfolio' ? 'bg-blue-50 text-blue-700' : 'text-gray-900'
-                        }`}
-                    >
-                      Portfolio
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedType('scratch')
-                        setTypeDropdownOpen(false)
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded transition-colors ${selectedType === 'scratch' ? 'bg-blue-50 text-blue-700' : 'text-gray-900'
-                        }`}
-                    >
-                      Scratch
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+
             <div className="relative w-full sm:w-64">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <button
@@ -522,14 +488,80 @@ export default function ProjectManager() {
           <CardContent>
             <div className="space-y-4">
               <div>
+                <label className="block text-sm font-medium mb-2">
+                  Cover Image {!editingId && <span className="text-red-500">*</span>}
+                </label>
+                <div className="relative">
+                  {coverImagePreview ? (
+                    <div className="relative w-full max-w-sm">
+                      <img
+                        src={coverImagePreview}
+                        alt="Preview"
+                        className="w-full aspect-square object-cover rounded-lg border border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCoverImagePreview(null)
+                          setFormData({ ...formData, coverImage: null })
+                          // Reset file input
+                          const fileInput = document.getElementById('image') as HTMLInputElement
+                          if (fileInput) fileInput.value = ''
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('image')?.click()}
+                        className="absolute bottom-2 right-2 bg-blue-500 text-white rounded-full px-3 py-1 text-sm hover:bg-blue-600 transition-colors"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => document.getElementById('image')?.click()}
+                      className="w-full max-w-sm aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                    >
+                      <Plus className="w-12 h-12 text-gray-400 mb-2" />
+                      <p className="text-gray-600 text-center">Click to upload image</p>
+                      <p className="text-gray-400 text-sm">PNG, JPG up to 10MB</p>
+                    </div>
+                  )}
+                  <input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCoverImageChange}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+
+              <div>
                 <label htmlFor="title" className="block text-sm font-medium mb-2">
                   Title <span className="text-red-500">*</span>
                 </label>
                 <Input
                   id="title"
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value, slug: generateSlug(e.target.value) })}
                   placeholder="Project title"
+                  disabled={submitting}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="slug" className="block text-sm font-medium mb-2">
+                  Slug
+                </label>
+                <Input
+                  id="slug"
+                  value={formData.slug}
+                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                  placeholder="URL-friendly slug (auto-generated if empty)"
                   disabled={submitting}
                 />
               </div>
@@ -621,35 +653,7 @@ export default function ProjectManager() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Type <span className="text-red-500">*</span></label>
-                <div className="flex gap-4">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="type"
-                      value="portfolio"
-                      checked={formData.type === 'portfolio'}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value as 'portfolio' | 'scratch' })}
-                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                      disabled={submitting}
-                    />
-                    <span className="text-sm font-medium text-gray-700">Portfolio</span>
-                  </label>
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="type"
-                      value="scratch"
-                      checked={formData.type === 'scratch'}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value as 'portfolio' | 'scratch' })}
-                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                      disabled={submitting}
-                    />
-                    <span className="text-sm font-medium text-gray-700">Scratch</span>
-                  </label>
-                </div>
-              </div>
+
 
               <div>
                 <label className="block text-sm font-medium mb-2">Categories</label>
@@ -726,13 +730,13 @@ export default function ProjectManager() {
           <Card>
             <CardContent className="p-12 text-center">
               <div className="text-gray-400 mb-4">
-                {searchTerm || selectedCategoryIds.length > 0 || selectedType !== 'all' ? <Search className="w-12 h-12 mx-auto" /> : <FolderOpen className="w-12 h-12 mx-auto" />}
+                {searchTerm || selectedCategoryIds.length > 0 ? <Search className="w-12 h-12 mx-auto" /> : <FolderOpen className="w-12 h-12 mx-auto" />}
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {searchTerm || selectedCategoryIds.length > 0 || selectedType !== 'all' ? 'No projects found' : 'No projects yet'}
+                {searchTerm || selectedCategoryIds.length > 0 ? 'No projects found' : 'No projects yet'}
               </h3>
               <p className="text-gray-600 mb-4">
-                {searchTerm || selectedCategoryIds.length > 0 || selectedType !== 'all'
+                {searchTerm || selectedCategoryIds.length > 0
                   ? 'No projects match your current search and filter criteria. Try adjusting your search terms or filters.'
                   : 'Create your first project collection.'
                 }

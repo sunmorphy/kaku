@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Image } from '@imagekit/next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { getProfile, type Profile } from './lib/api';
 import LoadingAnimation from './components/LoadingAnimation';
@@ -39,15 +39,16 @@ export default function Home() {
       <div className='h-screen w-full relative overflow-hidden'>
         {/* Background Image */}
         <div className="absolute inset-0">
-          <Image
-            urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
-            src={profile?.banner_image_path!}
-            alt={`${profile?.pseudonym} - ${profile?.role}`}
-            fill
-            className='object-cover'
-            priority
-            fetchPriority='high'
-          />
+          {profile?.banner_image_path && (
+            <Image
+              src={profile.banner_image_path}
+              alt={`${profile.pseudonym} - ${profile.role}`}
+              fill
+              className='object-cover'
+              priority
+              fetchPriority='high'
+            />
+          )}
         </div>
 
         {/* Overlay */}

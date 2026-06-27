@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, Trash2, Edit3, Save, X, Film, Loader2, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
-import { apiRequest, compressVideo } from '@/lib/utils'
+import { apiRequest, compressImage, compressVideo } from '@/lib/utils'
 import { Animation, Category } from '@/types'
 import { ConfirmDialog } from '@/components/ui/dialog'
 import { AnimationCard } from '@/components/cards'
+import { generateSlug } from '@/utils/slug'
 
 export default function AnimationManager() {
   const [animations, setAnimations] = useState<Animation[]>([])
@@ -26,12 +27,15 @@ export default function AnimationManager() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 25
   const [formData, setFormData] = useState({
+    coverImage: null as File | null,
     title: '',
     description: '',
+    slug: '',
     categoryIds: [] as number[],
     videos: [] as File[],
     published: true,
   })
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
   const [videoPreviews, setVideoPreviews] = useState<string[]>([])
   const [existingVideos, setExistingVideos] = useState<string[]>([]) // Track original videos from server
   const [removedVideoIndices, setRemovedVideoIndices] = useState<Set<number>>(new Set()) // Track which original videos to remove
@@ -102,11 +106,13 @@ export default function AnimationManager() {
   }
 
   const createAnimation = async () => {
-    if (!formData.title.trim() || formData.videos.length === 0) return
+    if (!formData.coverImage || !formData.title.trim() || formData.videos.length === 0) return
 
     setSubmitting(true)
     try {
       const formDataToSend = new FormData()
+      const compressedCoverImage = await compressImage(formData.coverImage)
+      formDataToSend.append('coverImage', compressedCoverImage)
 
       // Compress all videos and wait for completion
       const compressedVideos = await Promise.all(
@@ -120,6 +126,7 @@ export default function AnimationManager() {
 
       formDataToSend.append('title', formData.title)
       formDataToSend.append('description', formData.description)
+      formDataToSend.append('slug', formData.slug)
       formDataToSend.append('categoryIds', JSON.stringify(formData.categoryIds))
       formDataToSend.append('published', formData.published.toString())
 
@@ -129,7 +136,7 @@ export default function AnimationManager() {
       })
 
       resetForm()
-      await fetchAnimations() // Refresh the list
+      await fetchAnimations()
     } catch (error) {
       console.error('Failed to create animation:', error)
     } finally {
@@ -143,6 +150,11 @@ export default function AnimationManager() {
     setSubmitting(true)
     try {
       const formDataToSend = new FormData()
+
+      if (formData.coverImage) {
+        const compressedCoverImage = await compressImage(formData.coverImage)
+        formDataToSend.append('coverImage', compressedCoverImage)
+      }
 
       // Compress modified videos and wait for completion
       if (modifiedVideos.size > 0) {
@@ -178,6 +190,7 @@ export default function AnimationManager() {
 
       formDataToSend.append('title', formData.title)
       formDataToSend.append('description', formData.description)
+      formDataToSend.append('slug', formData.slug)
       formDataToSend.append('categoryIds', JSON.stringify(formData.categoryIds))
       formDataToSend.append('published', formData.published.toString())
 
@@ -187,7 +200,7 @@ export default function AnimationManager() {
       })
 
       resetForm()
-      await fetchAnimations() // Refresh the list
+      await fetchAnimations()
     } catch (error) {
       console.error('Failed to update animation:', error)
     } finally {
@@ -204,7 +217,7 @@ export default function AnimationManager() {
 
     try {
       await apiRequest(`/animations/${deleteDialog.animationId}`, { method: 'DELETE' })
-      await fetchAnimations() // Refresh the list
+      await fetchAnimations()
     } catch (error) {
       console.error('Failed to delete animation:', error)
     } finally {
@@ -215,13 +228,14 @@ export default function AnimationManager() {
   const startEdit = (animation: Animation) => {
     setEditingId(animation.id)
     setFormData({
+      coverImage: null,
       title: animation.title,
       description: animation.description || '',
-      categoryIds: animation.animation_categories.map(pc => pc.category.id),
+      slug: animation.slug || '',
+      categoryIds: animation.animation_categories?.map(pc => pc.category.id) || [],
       videos: [],
       published: animation.published ?? true,
     })
-    // Initialize editing state for videos
     setExistingVideos(animation.batch_video_path)
     setVideoPreviews(animation.batch_video_path)
     setRemovedVideoIndices(new Set())
@@ -232,8 +246,10 @@ export default function AnimationManager() {
 
   const resetForm = () => {
     setFormData({
+      coverImage: null,
       title: '',
       description: '',
+      slug: '',
       categoryIds: [],
       videos: [],
       published: true,
@@ -256,40 +272,48 @@ export default function AnimationManager() {
     }))
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
+  const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null
+    setFormData({ ...formData, coverImage: file })
+
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setCoverImagePreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    } else {
+      setCoverImagePreview(null)
+    }
+  }
+
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
     if (typeof index === 'number') {
-      // Single video replacement at specific index
       const file = files[0]
       const newPreviews = [...videoPreviews]
       const newModifiedVideos = new Map(modifiedVideos)
 
-      // Track this video as modified
       newModifiedVideos.set(index, file)
       setModifiedVideos(newModifiedVideos)
 
-      // Generate preview URL for the new video
       const videoUrl = URL.createObjectURL(file)
       newPreviews[index] = videoUrl
       setVideoPreviews(newPreviews)
     } else {
-      // Multiple videos added to the end
       const currentPreviewCount = videoPreviews.length
       const newPreviews = [...videoPreviews]
 
       if (editingId) {
-        // For editing: add to addedVideos array
         const newAddedVideos = [...addedVideos, ...files]
         setAddedVideos(newAddedVideos)
       } else {
-        // For new animation creation: add to formData.videos
         const newVideos = [...formData.videos, ...files]
         setFormData({ ...formData, videos: newVideos })
       }
 
-      // Generate preview URLs for all new video files
       files.forEach((file, fileIndex) => {
         const videoUrl = URL.createObjectURL(file)
         newPreviews[currentPreviewCount + fileIndex] = videoUrl
@@ -302,27 +326,20 @@ export default function AnimationManager() {
   const removeVideo = (indexToRemove: number) => {
     if (editingId) {
       if (indexToRemove < existingVideos.length) {
-        // This is an existing video - mark it for removal (don't actually remove from arrays)
         const newRemovedIndices = new Set(removedVideoIndices)
         newRemovedIndices.add(indexToRemove)
         setRemovedVideoIndices(newRemovedIndices)
-
-        // Remove from modified videos if it was modified
         const newModifiedVideos = new Map(modifiedVideos)
         newModifiedVideos.delete(indexToRemove)
         setModifiedVideos(newModifiedVideos)
       } else {
-        // This is a newly added video - actually remove it
         const addedImageIndex = indexToRemove - existingVideos.length
         const newAddedVideos = addedVideos.filter((_, index) => index !== addedImageIndex)
         setAddedVideos(newAddedVideos)
-
-        // Remove from UI preview for added videos
         const newPreviews = videoPreviews.filter((_, index) => index !== indexToRemove)
         setVideoPreviews(newPreviews)
       }
     } else {
-      // For new animation creation - remove from formData.videos
       const newVideos = formData.videos.filter((_, index) => index !== indexToRemove)
       const newPreviews = videoPreviews.filter((_, index) => index !== indexToRemove)
 
@@ -331,7 +348,6 @@ export default function AnimationManager() {
     }
   }
 
-  // Reset to first page when search/filter changes
   useEffect(() => {
     setCurrentPage(1)
   }, [searchTerm, selectedCategoryIds])
@@ -450,14 +466,79 @@ export default function AnimationManager() {
           <CardContent>
             <div className="space-y-4">
               <div>
+                <label className="block text-sm font-medium mb-2">
+                  Cover Image {!editingId && <span className="text-red-500">*</span>}
+                </label>
+                <div className="relative">
+                  {coverImagePreview ? (
+                    <div className="relative w-full max-w-sm">
+                      <img
+                        src={coverImagePreview}
+                        alt="Preview"
+                        className="w-full aspect-square object-cover rounded-lg border border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCoverImagePreview(null)
+                          setFormData({ ...formData, coverImage: null })
+                          const fileInput = document.getElementById('image') as HTMLInputElement
+                          if (fileInput) fileInput.value = ''
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('image')?.click()}
+                        className="absolute bottom-2 right-2 bg-blue-500 text-white rounded-full px-3 py-1 text-sm hover:bg-blue-600 transition-colors"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => document.getElementById('image')?.click()}
+                      className="w-full max-w-sm aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                    >
+                      <Plus className="w-12 h-12 text-gray-400 mb-2" />
+                      <p className="text-gray-600 text-center">Click to upload image</p>
+                      <p className="text-gray-400 text-sm">PNG, JPG up to 10MB</p>
+                    </div>
+                  )}
+                  <input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCoverImageChange}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+
+              <div>
                 <label htmlFor="title" className="block text-sm font-medium mb-2">
                   Title <span className="text-red-500">*</span>
                 </label>
                 <Input
                   id="title"
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value, slug: generateSlug(e.target.value) })}
                   placeholder="Animation title"
+                  disabled={submitting}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="slug" className="block text-sm font-medium mb-2">
+                  Slug
+                </label>
+                <Input
+                  id="slug"
+                  value={formData.slug}
+                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                  placeholder="URL-friendly slug (auto-generated if empty)"
                   disabled={submitting}
                 />
               </div>
@@ -498,7 +579,7 @@ export default function AnimationManager() {
                     type="file"
                     accept="video/*"
                     multiple
-                    onChange={(e) => handleImageChange(e)}
+                    onChange={(e) => handleVideoChange(e)}
                     className="hidden"
                   />
                   <p className="text-sm text-gray-500 mt-1">
@@ -547,7 +628,7 @@ export default function AnimationManager() {
                             id={`video-${index}`}
                             type="file"
                             accept="video/*"
-                            onChange={(e) => handleImageChange(e, index)}
+                            onChange={(e) => handleVideoChange(e, index)}
                             className="hidden"
                           />
                         </div>

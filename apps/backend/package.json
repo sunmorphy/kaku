@@ -1,16 +1,19 @@
 {
-  "name": "backend",
+  "name": "kaku-be",
   "version": "1.0.0",
   "description": "Express backend for Meng CMS",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "scripts": {
-    "dev": "nodemon src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "db:migrate": "node -r ts-node/register src/db/migrate.ts"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts"
   },
   "dependencies": {
     "@kaku/types": "workspace:*",
+    "@neondatabase/serverless": "^0.10.4",
+    "drizzle-orm": "^0.38.4",
     "@aws-sdk/client-s3": "^3.956.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
@@ -20,10 +23,10 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^7.0.5",
-    "pg": "^8.16.3",
     "validator": "^13.11.0"
   },
   "devDependencies": {
+    "drizzle-kit": "^0.30.4",
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
@@ -31,10 +34,8 @@
     "@types/multer": "^1.4.11",
     "@types/node": "^20.11.0",
     "@types/nodemailer": "^7.0.1",
-    "@types/pg": "^8.10.9",
     "@types/validator": "^13.11.8",
-    "nodemon": "^3.0.3",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.3.3"
   }
 }

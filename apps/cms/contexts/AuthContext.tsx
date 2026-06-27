@@ -30,11 +30,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // Validate token with server
+      // Validate token
       const userData = await apiRequest<User>('/auth/profile')
       setUser(userData)
     } catch (error) {
-      // Token is invalid or expired
       localStorage.removeItem('auth_token')
       localStorage.removeItem('cms_active_section')
       setUser(null)
@@ -50,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method: 'POST',
         body: JSON.stringify(credentials),
       })
-      
+
       localStorage.setItem('auth_token', response.token)
       setUser(response.user)
     } catch (error) {

@@ -17,7 +17,6 @@ export default function RichTextContent({ content, className = '' }: RichTextCon
   const uniqueId = useMemo(() => `rich-text-${Math.random().toString(36).substring(2, 11)}`, [])
 
   useEffect(() => {
-    // Inject styles if they don't exist
     const styleId = 'rich-text-content-styles'
     if (!document.getElementById(styleId)) {
       const style = document.createElement('style')
@@ -46,7 +45,6 @@ export default function RichTextContent({ content, className = '' }: RichTextCon
   )
 }
 
-// Add this CSS to your global styles or component styles
 export const richTextStyles = `
 .rich-text-content {
   /* Typography */

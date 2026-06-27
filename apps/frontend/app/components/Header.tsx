@@ -2,13 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Image } from '@imagekit/next';
+import Image from 'next/image';
 import Navigation from './Navigation';
 
 export default function Header() {
   const pathname = usePathname();
 
-  // Hide header on root page
   if (pathname === '/') {
     return null;
   }
@@ -17,8 +16,7 @@ export default function Header() {
     <div className="flex flex-col gap-8 w-full items-center p-8">
       <Link href="/" className="w-xs">
         <Image
-          urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
-          src="/kaku/kakushigoto.png"
+          src="https://kaku.andpuji27.workers.dev/kaku/kakushigoto.png"
           alt="Logo"
           loading="lazy"
           width={3508}

@@ -9,57 +9,10 @@ export function cn(...inputs: ClassValue[]) {
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-// ImageKit configuration
-export const IMAGEKIT_URL_ENDPOINT = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/your_imagekit_id'
-
-// ImageKit utility function to transform image URLs
-export function getImageKitUrl(
-  path: string,
-  transformations?: {
-    width?: number
-    height?: number
-    quality?: number
-    format?: 'jpg' | 'png' | 'webp' | 'auto'
-    crop?: 'maintain_ratio' | 'force' | 'at_least' | 'at_max'
-    focus?: 'center' | 'top' | 'left' | 'bottom' | 'right' | 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right' | 'auto'
-  }
-): string {
-  if (!path) return ''
-
-  // If it's already a full URL (external image), return as is
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path
-  }
-
-  // Remove leading slash if present
-  const cleanPath = path.startsWith('/') ? path.slice(1) : path
-
-  // Build transformation string
-  let transformationString = ''
-  if (transformations) {
-    const params: string[] = []
-
-    if (transformations.width) params.push(`w-${transformations.width}`)
-    if (transformations.height) params.push(`h-${transformations.height}`)
-    if (transformations.quality) params.push(`q-${transformations.quality}`)
-    if (transformations.format) params.push(`f-${transformations.format}`)
-    if (transformations.crop) params.push(`c-${transformations.crop}`)
-    if (transformations.focus) params.push(`fo-${transformations.focus}`)
-
-    if (params.length > 0) {
-      transformationString = `tr:${params.join(',')}/`
-    }
-  }
-
-  return `${IMAGEKIT_URL_ENDPOINT}/${transformationString}${cleanPath}`
-}
-
-// Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
 })
 
-// Request interceptor to add auth token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token')
   if (token) {
@@ -68,7 +21,6 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Response interceptor to handle auth errors
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
@@ -96,11 +48,9 @@ export async function apiRequest<T>(
       headers: options?.headers,
     }
 
-    // Handle different body types
     if (options?.body) {
       if (options.body instanceof FormData) {
         config.data = options.body
-        // Don't set Content-Type for FormData - axios will set it with boundary
       } else if (typeof options.body === 'string') {
         config.data = JSON.parse(options.body)
         config.headers = { ...config.headers, 'Content-Type': 'application/json' }
@@ -149,7 +99,6 @@ export const compressVideo = (video: File): Promise<File | Blob> => {
 
       videoElement.onloadedmetadata = async () => {
         try {
-          // Create a canvas to capture video frames
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
 
@@ -158,7 +107,7 @@ export const compressVideo = (video: File): Promise<File | Blob> => {
             return;
           }
 
-          // Set canvas dimensions (reduce resolution for compression)
+          // Set canvas dimensions
           const maxWidth = 1920;
           const maxHeight = 1080;
           let width = videoElement.videoWidth;

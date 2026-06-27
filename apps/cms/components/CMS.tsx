@@ -18,7 +18,7 @@ export default function CMS() {
   const [activeSection, setActiveSection] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Load saved section from localStorage on mount
+  // Load saved section
   useEffect(() => {
     const savedSection = localStorage.getItem('cms_active_section')
     if (savedSection) {
@@ -26,7 +26,7 @@ export default function CMS() {
     }
   }, [])
 
-  // Save active section to localStorage whenever it changes
+  // Save active section
   const handleSectionChange = (section: string) => {
     setActiveSection(section)
     localStorage.setItem('cms_active_section', section)
@@ -82,7 +82,7 @@ export default function CMS() {
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <h1 className="text-lg font-semibold text-gray-900">Meng</h1>
+          <h1 className="text-lg font-semibold text-gray-900">Manage Content</h1>
           <div className="w-8" /> {/* Spacer for centering */}
         </div>
         {renderContent()}

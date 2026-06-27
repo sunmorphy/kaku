@@ -16,7 +16,7 @@ RUN bun install --frozen-lockfile
 COPY . .
 
 # Build the backend app (which compiles the typescript code)
-RUN bun --filter backend build
+RUN bun --filter kaku-be build
 
 # Stage 2: Production runner
 FROM oven/bun:1-slim AS runner

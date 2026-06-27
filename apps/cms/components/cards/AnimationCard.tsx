@@ -13,20 +13,15 @@ export function AnimationCard({ animation, onEdit, onDelete }: AnimationCardProp
     return (
         <Card className="overflow-hidden">
             <div className="aspect-video bg-gray-100 relative">
-                {/* Video count badge in top-right */}
                 <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm z-10">
                     {animation.batch_video_path.length} video{animation.batch_video_path.length > 1 ? 's' : ''}
                 </div>
-                <video
-                    src={animation.batch_video_path[0]}
+                <img
+                    src={animation.cover_image_path ? animation.cover_image_path : '/placeholder-image.svg'}
+                    alt={animation.title}
                     className="w-full h-full object-cover"
-                    muted
-                    loop
-                    playsInline
-                    onMouseEnter={(e) => e.currentTarget.play()}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.pause()
-                        e.currentTarget.currentTime = 0
+                    onError={(e) => {
+                        e.currentTarget.src = '/placeholder-image.svg'
                     }}
                 />
             </div>

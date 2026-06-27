@@ -1,12 +1,41 @@
 import { Router } from 'express';
-import { query } from '../db/connection';
+import { db } from '../db/connection';
+import { artworks, artworkCategories, categories } from '../db/schema';
+import { eq, or, and, inArray, exists, desc, count, SQL, ilike } from 'drizzle-orm';
 import { upload } from '../middleware/upload';
 import { uploadToR2 } from '../services/r2';
 import { authenticateToken } from '../middleware/auth';
+import { parseCategoryIds } from '../utils/categories';
 
 const router = Router();
 
-// Get all artworks (public, no auth required)
+async function getArtworkWithCategories(artworkIdOrSlug: number | string) {
+  const isNumeric = typeof artworkIdOrSlug === 'number' || /^\d+$/.test(artworkIdOrSlug.toString());
+
+  const result = await db.query.artworks.findFirst({
+    where: isNumeric
+      ? eq(artworks.id, typeof artworkIdOrSlug === 'number' ? artworkIdOrSlug : parseInt(artworkIdOrSlug))
+      : eq(artworks.slug, artworkIdOrSlug.toString()),
+    with: {
+      artworkCategories: {
+        with: {
+          category: true
+        }
+      }
+    }
+  });
+
+  if (!result) return null;
+
+  return {
+    ...result,
+    artwork_categories: result.artworkCategories.map(ac => ({
+      category: ac.category
+    }))
+  };
+}
+
+// Get all artworks
 router.get('/', async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -17,96 +46,71 @@ router.get('/', async (req, res) => {
 
     const offset = (page - 1) * limit;
 
-    let whereConditions: string[] = [];
-    let queryParams: any[] = [];
-    let paramIndex = 1;
+    const conditions: (SQL | undefined)[] = [];
 
-    // Add search condition
     if (search.trim()) {
-      whereConditions.push(`(LOWER(a.title) LIKE $${paramIndex} OR LOWER(a.description) LIKE $${paramIndex})`);
-      queryParams.push(`%${search.toLowerCase()}%`);
-      paramIndex++;
+      conditions.push(or(
+        ilike(artworks.title, `%${search}%`),
+        ilike(artworks.description, `%${search}%`)
+      ));
     }
 
-    // Add type filter condition
     if (type.trim() && (type === 'portfolio' || type === 'scratch')) {
-      whereConditions.push(`a.type = $${paramIndex}`);
-      queryParams.push(type);
-      paramIndex++;
+      conditions.push(eq(artworks.type, type));
     }
 
-    // Filter by published for public endpoint
-    whereConditions.push(`a.published = true`);
+    conditions.push(eq(artworks.published, true));
 
-    // Add category filter condition
     if (categoryIds.trim()) {
       try {
         const categoryIdArray = JSON.parse(categoryIds);
         if (Array.isArray(categoryIdArray) && categoryIdArray.length > 0) {
-          const categoryPlaceholders = categoryIdArray.map((_, i) => `$${paramIndex + i}`).join(', ');
-          whereConditions.push(`EXISTS (
-            SELECT 1 FROM artwork_categories ac2 
-            WHERE ac2.artwork_id = a.id AND ac2.category_id IN (${categoryPlaceholders})
-          )`);
-          queryParams.push(...categoryIdArray);
-          paramIndex += categoryIdArray.length;
+          conditions.push(exists(
+            db.select()
+              .from(artworkCategories)
+              .where(and(
+                eq(artworkCategories.artwork_id, artworks.id),
+                inArray(artworkCategories.category_id, categoryIdArray)
+              ))
+          ));
         }
       } catch (error) {
         // Ignore invalid JSON
       }
     }
 
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count for pagination
-    const countResult = await query(`
-      SELECT COUNT(DISTINCT a.id) as total
-      FROM artworks a
-      LEFT JOIN artwork_categories ac ON a.id = ac.artwork_id
-      LEFT JOIN categories c ON ac.category_id = c.id
-      ${whereClause}
-    `, queryParams);
-
-    const total = parseInt(countResult.rows[0].total);
+    const totalResult = await db.select({ value: count() }).from(artworks)
+      .where(whereClause);
+    const total = totalResult[0].value;
     const totalPages = Math.ceil(total / limit);
 
     // Get paginated results
-    const result = await query(`
-      SELECT 
-        a.id,
-        a.image_path,
-        a.title,
-        a.description,
-        a.type,
-        a.published,
-        a.user_id,
-        a.created_at,
-        a.updated_at,
-        COALESCE(
-          JSON_AGG(
-            JSON_BUILD_OBJECT(
-              'category', JSON_BUILD_OBJECT(
-                'id', c.id,
-                'name', c.name,
-                'user_id', c.user_id,
-                'created_at', c.created_at,
-                'updated_at', c.updated_at
-              )
-            )
-          ) FILTER (WHERE c.id IS NOT NULL), 
-          '[]'
-        ) as artwork_categories
-      FROM artworks a
-      LEFT JOIN artwork_categories ac ON a.id = ac.artwork_id
-      LEFT JOIN categories c ON ac.category_id = c.id
-      ${whereClause}
-      GROUP BY a.id
-      ORDER BY a.created_at DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `, [...queryParams, limit, offset]);
+    const artworksList = await db.query.artworks.findMany({
+      where: whereClause,
+      with: {
+        artworkCategories: {
+          with: {
+            category: true
+          }
+        }
+      },
+      limit,
+      offset,
+      orderBy: [desc(artworks.created_at)]
+    });
+
+    const formattedData = artworksList.map(a => ({
+      ...a,
+      artwork_categories: a.artworkCategories.map(ac => ({
+        category: ac.category
+      }))
+    }));
 
     res.status(200).json({
-      data: result.rows,
+      data: formattedData,
       pagination: {
         page,
         limit,
@@ -117,11 +121,12 @@ router.get('/', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error fetching artworks:', error);
     res.status(500).json({ error: 'Failed to fetch artworks' });
   }
 });
 
-// Get artworks by user ID (public, no auth required)
+// Get artworks by user ID
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -133,96 +138,72 @@ router.get('/user/:userId', async (req, res) => {
 
     const offset = (page - 1) * limit;
 
-    let whereConditions = ['a.user_id = $1'];
-    let queryParams: any[] = [parseInt(userId)];
-    let paramIndex = 2;
+    const conditions: (SQL | undefined)[] = [];
+    conditions.push(eq(artworks.user_id, parseInt(userId)));
 
-    // Add search condition
     if (search.trim()) {
-      whereConditions.push(`(LOWER(a.title) LIKE $${paramIndex} OR LOWER(a.description) LIKE $${paramIndex})`);
-      queryParams.push(`%${search.toLowerCase()}%`);
-      paramIndex++;
+      conditions.push(or(
+        ilike(artworks.title, `%${search}%`),
+        ilike(artworks.description, `%${search}%`)
+      ));
     }
 
-    // Add type filter condition
     if (type.trim() && (type === 'portfolio' || type === 'scratch')) {
-      whereConditions.push(`a.type = $${paramIndex}`);
-      queryParams.push(type);
-      paramIndex++;
+      conditions.push(eq(artworks.type, type));
     }
 
-    // Filter by published for public endpoint
-    whereConditions.push(`a.published = true`);
+    conditions.push(eq(artworks.published, true));
 
-    // Add category filter condition
     if (categoryIds.trim()) {
       try {
         const categoryIdArray = JSON.parse(categoryIds);
         if (Array.isArray(categoryIdArray) && categoryIdArray.length > 0) {
-          const categoryPlaceholders = categoryIdArray.map((_, i) => `$${paramIndex + i}`).join(', ');
-          whereConditions.push(`EXISTS (
-            SELECT 1 FROM artwork_categories ac2 
-            WHERE ac2.artwork_id = a.id AND ac2.category_id IN (${categoryPlaceholders})
-          )`);
-          queryParams.push(...categoryIdArray);
-          paramIndex += categoryIdArray.length;
+          conditions.push(exists(
+            db.select()
+              .from(artworkCategories)
+              .where(and(
+                eq(artworkCategories.artwork_id, artworks.id),
+                inArray(artworkCategories.category_id, categoryIdArray)
+              ))
+          ));
         }
       } catch (error) {
         // Ignore invalid JSON
       }
     }
 
-    const whereClause = whereConditions.join(' AND ');
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count for pagination
-    const countResult = await query(`
-      SELECT COUNT(DISTINCT a.id) as total
-      FROM artworks a
-      LEFT JOIN artwork_categories ac ON a.id = ac.artwork_id
-      LEFT JOIN categories c ON ac.category_id = c.id
-      WHERE ${whereClause}
-    `, queryParams);
-
-    const total = parseInt(countResult.rows[0].total);
+    const totalResult = await db.select({ value: count() }).from(artworks)
+      .where(whereClause);
+    const total = totalResult[0].value;
     const totalPages = Math.ceil(total / limit);
 
     // Get paginated results
-    const result = await query(`
-      SELECT 
-        a.id,
-        a.image_path,
-        a.title,
-        a.description,
-        a.type,
-        a.published,
-        a.user_id,
-        a.created_at,
-        a.updated_at,
-        COALESCE(
-          JSON_AGG(
-            JSON_BUILD_OBJECT(
-              'category', JSON_BUILD_OBJECT(
-                'id', c.id,
-                'name', c.name,
-                'user_id', c.user_id,
-                'created_at', c.created_at,
-                'updated_at', c.updated_at
-              )
-            )
-          ) FILTER (WHERE c.id IS NOT NULL), 
-          '[]'
-        ) as artwork_categories
-      FROM artworks a
-      LEFT JOIN artwork_categories ac ON a.id = ac.artwork_id
-      LEFT JOIN categories c ON ac.category_id = c.id
-      WHERE ${whereClause}
-      GROUP BY a.id
-      ORDER BY a.created_at DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `, [...queryParams, limit, offset]);
+    const artworksList = await db.query.artworks.findMany({
+      where: whereClause,
+      with: {
+        artworkCategories: {
+          with: {
+            category: true
+          }
+        }
+      },
+      limit,
+      offset,
+      orderBy: [desc(artworks.created_at)]
+    });
+
+    const formattedData = artworksList.map(a => ({
+      ...a,
+      artwork_categories: a.artworkCategories.map(ac => ({
+        category: ac.category
+      }))
+    }));
 
     res.status(200).json({
-      data: result.rows,
+      data: formattedData,
       pagination: {
         page,
         limit,
@@ -233,14 +214,18 @@ router.get('/user/:userId', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error fetching user artworks:', error);
     res.status(500).json({ error: 'Failed to fetch user artworks' });
   }
 });
 
-// Get current user's artworks (requires authentication)
+// Get current user's artworks
 router.get('/my', authenticateToken, async (req, res) => {
   try {
     const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 25;
     const search = req.query.search as string || '';
@@ -249,93 +234,70 @@ router.get('/my', authenticateToken, async (req, res) => {
 
     const offset = (page - 1) * limit;
 
-    let whereConditions = ['a.user_id = $1'];
-    let queryParams: any[] = [userId];
-    let paramIndex = 2;
+    const conditions: (SQL | undefined)[] = [];
+    conditions.push(eq(artworks.user_id, userId));
 
-    // Add search condition
     if (search.trim()) {
-      whereConditions.push(`(LOWER(a.title) LIKE $${paramIndex} OR LOWER(a.description) LIKE $${paramIndex})`);
-      queryParams.push(`%${search.toLowerCase()}%`);
-      paramIndex++;
+      conditions.push(or(
+        ilike(artworks.title, `%${search}%`),
+        ilike(artworks.description, `%${search}%`)
+      ));
     }
 
-    // Add type filter condition
     if (type.trim() && (type === 'portfolio' || type === 'scratch')) {
-      whereConditions.push(`a.type = $${paramIndex}`);
-      queryParams.push(type);
-      paramIndex++;
+      conditions.push(eq(artworks.type, type));
     }
 
-    // Add category filter condition
     if (categoryIds.trim()) {
       try {
         const categoryIdArray = JSON.parse(categoryIds);
         if (Array.isArray(categoryIdArray) && categoryIdArray.length > 0) {
-          const categoryPlaceholders = categoryIdArray.map((_, i) => `$${paramIndex + i}`).join(', ');
-          whereConditions.push(`EXISTS (
-            SELECT 1 FROM artwork_categories ac2 
-            WHERE ac2.artwork_id = a.id AND ac2.category_id IN (${categoryPlaceholders})
-          )`);
-          queryParams.push(...categoryIdArray);
-          paramIndex += categoryIdArray.length;
+          conditions.push(exists(
+            db.select()
+              .from(artworkCategories)
+              .where(and(
+                eq(artworkCategories.artwork_id, artworks.id),
+                inArray(artworkCategories.category_id, categoryIdArray)
+              ))
+          ));
         }
       } catch (error) {
         // Ignore invalid JSON
       }
     }
 
-    const whereClause = whereConditions.join(' AND ');
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count for pagination
-    const countResult = await query(`
-      SELECT COUNT(DISTINCT a.id) as total
-      FROM artworks a
-      LEFT JOIN artwork_categories ac ON a.id = ac.artwork_id
-      LEFT JOIN categories c ON ac.category_id = c.id
-      WHERE ${whereClause}
-    `, queryParams);
-
-    const total = parseInt(countResult.rows[0].total);
+    const totalResult = await db.select({ value: count() }).from(artworks)
+      .where(whereClause);
+    const total = totalResult[0].value;
     const totalPages = Math.ceil(total / limit);
 
     // Get paginated results
-    const result = await query(`
-      SELECT 
-        a.id,
-        a.image_path,
-        a.title,
-        a.description,
-        a.type,
-        a.published,
-        a.user_id,
-        a.created_at,
-        a.updated_at,
-        COALESCE(
-          JSON_AGG(
-            JSON_BUILD_OBJECT(
-              'category', JSON_BUILD_OBJECT(
-                'id', c.id,
-                'name', c.name,
-                'user_id', c.user_id,
-                'created_at', c.created_at,
-                'updated_at', c.updated_at
-              )
-            )
-          ) FILTER (WHERE c.id IS NOT NULL), 
-          '[]'
-        ) as artwork_categories
-      FROM artworks a
-      LEFT JOIN artwork_categories ac ON a.id = ac.artwork_id
-      LEFT JOIN categories c ON ac.category_id = c.id
-      WHERE ${whereClause}
-      GROUP BY a.id
-      ORDER BY a.created_at DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `, [...queryParams, limit, offset]);
+    const artworksList = await db.query.artworks.findMany({
+      where: whereClause,
+      with: {
+        artworkCategories: {
+          with: {
+            category: true
+          }
+        }
+      },
+      limit,
+      offset,
+      orderBy: [desc(artworks.created_at)]
+    });
+
+    const formattedData = artworksList.map(a => ({
+      ...a,
+      artwork_categories: a.artworkCategories.map(ac => ({
+        category: ac.category
+      }))
+    }));
 
     res.status(200).json({
-      data: result.rows,
+      data: formattedData,
       pagination: {
         page,
         limit,
@@ -346,63 +308,58 @@ router.get('/my', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error fetching artworks:', error);
     res.status(500).json({ error: 'Failed to fetch artworks' });
   }
 });
 
-// Get single artwork (public, no auth required)
+// Get artwork by ID
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await query(`
-      SELECT 
-        a.id,
-        a.image_path,
-        a.title,
-        a.description,
-        a.type,
-        a.published,
-        a.user_id,
-        a.created_at,
-        a.updated_at,
-        COALESCE(
-          JSON_AGG(
-            JSON_BUILD_OBJECT(
-              'category', JSON_BUILD_OBJECT(
-                'id', c.id,
-                'name', c.name,
-                'user_id', c.user_id,
-                'created_at', c.created_at,
-                'updated_at', c.updated_at
-              )
-            )
-          ) FILTER (WHERE c.id IS NOT NULL), 
-          '[]'
-        ) as artwork_categories
-      FROM artworks a
-      LEFT JOIN artwork_categories ac ON a.id = ac.artwork_id
-      LEFT JOIN categories c ON ac.category_id = c.id
-      WHERE a.id = $1 AND a.published = true
-      GROUP BY a.id
-    `, [parseInt(id)]);
+    const isNumeric = /^\d+$/.test(id);
+    const artwork = await db.query.artworks.findFirst({
+      where: and(
+        isNumeric ? eq(artworks.id, parseInt(id)) : eq(artworks.slug, id),
+        eq(artworks.published, true)
+      ),
+      with: {
+        artworkCategories: {
+          with: {
+            category: true
+          }
+        }
+      }
+    });
 
-    if (result.rows.length === 0) {
+    if (!artwork) {
       return res.status(404).json({ error: 'Artwork not found' });
     }
-    res.status(200).json(result.rows[0]);
+
+    const formatted = {
+      ...artwork,
+      artwork_categories: artwork.artworkCategories.map(ac => ({
+        category: ac.category
+      }))
+    };
+
+    res.status(200).json(formatted);
   } catch (error) {
+    console.error('Error fetching artwork:', error);
     res.status(500).json({ error: 'Failed to fetch artwork' });
   }
 });
 
+
+// Create Artwork
 router.post('/', authenticateToken, upload.single('image'), async (req, res) => {
   try {
-    // Extract fields from req.body (populated by multer)
     const title = req.body?.title || null;
     const description = req.body?.description || null;
     const type = req.body?.type || 'portfolio';
     const published = req.body?.published !== undefined ? req.body.published === 'true' || req.body.published === true : true;
     const categoryIds = req.body?.categoryIds || null;
+    const slug = req.body?.slug || null;
     const file = req.file;
     const userId = req.user?.userId;
 
@@ -410,7 +367,10 @@ router.post('/', authenticateToken, upload.single('image'), async (req, res) => 
       return res.status(400).json({ error: 'Image file is required' });
     }
 
-    // Validate type field
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     if (type && !['portfolio', 'scratch'].includes(type)) {
       return res.status(400).json({ error: 'Type must be either "portfolio" or "scratch"' });
     }
@@ -418,63 +378,37 @@ router.post('/', authenticateToken, upload.single('image'), async (req, res) => 
     const username = req.user?.username!;
     const r2Result = await uploadToR2(file.buffer, file.originalname, username, 'artworks');
 
-    const artworkResult = await query(`
-      INSERT INTO artworks (image_path, title, description, type, published, user_id)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *
-    `, [r2Result.url, title || null, description || null, type, published, userId]);
+    const inserted = await db.insert(artworks)
+      .values({
+        image_path: r2Result.url,
+        title,
+        description,
+        type,
+        published,
+        user_id: userId,
+        slug: slug!,
+        created_at: new Date(),
+        updated_at: new Date()
+      })
+      .returning();
 
-    const artwork = artworkResult.rows[0];
+    const createdArtwork = inserted[0];
 
-    if (categoryIds && categoryIds.trim() !== '') {
-      try {
-        const parsedCategoryIds = JSON.parse(categoryIds);
-        if (Array.isArray(parsedCategoryIds) && parsedCategoryIds.length > 0) {
-          const values = parsedCategoryIds.map((categoryId: number) => `(${artwork.id}, ${categoryId})`).join(', ');
-          await query(`
-            INSERT INTO artwork_categories (artwork_id, category_id)
-            VALUES ${values}
-          `);
-        }
-      } catch (error) {
-        // Ignore JSON parse errors - categories are optional
-      }
+    const parsedIds = parseCategoryIds(categoryIds);
+    if (parsedIds.length > 0) {
+      const values = parsedIds.map((categoryId: number) => ({
+        artwork_id: createdArtwork.id,
+        category_id: categoryId
+      }));
+      await db.insert(artworkCategories).values(values);
     }
 
-    const result = await query(`
-      SELECT 
-        a.id,
-        a.image_path,
-        a.title,
-        a.description,
-        a.type,
-        a.published,
-        a.user_id,
-        a.created_at,
-        a.updated_at,
-        COALESCE(
-          JSON_AGG(
-            JSON_BUILD_OBJECT(
-              'category', JSON_BUILD_OBJECT(
-                'id', c.id,
-                'name', c.name,
-                'user_id', c.user_id,
-                'created_at', c.created_at,
-                'updated_at', c.updated_at
-              )
-            )
-          ) FILTER (WHERE c.id IS NOT NULL), 
-          '[]'
-        ) as artwork_categories
-      FROM artworks a
-      LEFT JOIN artwork_categories ac ON a.id = ac.artwork_id
-      LEFT JOIN categories c ON ac.category_id = c.id
-      WHERE a.id = $1
-      GROUP BY a.id
-    `, [artwork.id]);
+    const artwork = createdArtwork;
 
-    res.status(201).json(result.rows[0]);
+    const formattedArtwork = await getArtworkWithCategories(artwork.id);
+    res.status(201).json(formattedArtwork);
   } catch (error) {
+    console.error('Error creating artwork:', error);
     res.status(500).json({
       error: 'Failed to create artwork',
       message: error instanceof Error ? error.message : 'Unknown error'
@@ -482,6 +416,7 @@ router.post('/', authenticateToken, upload.single('image'), async (req, res) => 
   }
 });
 
+// Update Artwork
 router.put('/:id', authenticateToken, upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -490,105 +425,95 @@ router.put('/:id', authenticateToken, upload.single('image'), async (req, res) =
     const type = req.body?.type;
     const published = req.body?.published !== undefined ? req.body.published === 'true' || req.body.published === true : undefined;
     const categoryIds = req.body?.categoryIds || null;
+    const slug = req.body?.slug;
     const file = req.file;
     const userId = req.user?.userId;
 
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     // Validate type field if provided
     if (type && !['portfolio', 'scratch'].includes(type)) {
       return res.status(400).json({ error: 'Type must be either "portfolio" or "scratch"' });
     }
 
-    let updateQuery = `
-      UPDATE artworks 
-      SET title = $2, description = $3, type = $4, published = $5, updated_at = NOW()
-    `;
-    let updateParams = [parseInt(id), title || null, description || null, type, published];
+    const updateFields: any = {
+      title,
+      description,
+      type,
+      published,
+      updated_at: new Date()
+    };
+
+    if (slug !== undefined) {
+      updateFields.slug = slug!;
+    }
 
     if (file) {
       const username = req.user?.username!;
       const r2Result = await uploadToR2(file.buffer, file.originalname, username, 'artworks');
-      updateQuery = `
-        UPDATE artworks 
-        SET title = $2, description = $3, type = $4, published = $5, image_path = $6, updated_at = NOW()
-      `;
-      updateParams = [parseInt(id), title || null, description || null, type, published, r2Result.url];
+      updateFields.image_path = r2Result.url;
     }
 
-    updateQuery += ` WHERE id = $1 AND user_id = $${updateParams.length + 1} RETURNING *`;
-    updateParams.push(userId);
+    Object.keys(updateFields).forEach(key => updateFields[key] === undefined && delete updateFields[key]);
 
-    const updateResult = await query(updateQuery, updateParams);
-    if (updateResult.rows.length === 0) {
+    const updated = await db.update(artworks)
+      .set(updateFields)
+      .where(and(eq(artworks.id, parseInt(id)), eq(artworks.user_id, userId)))
+      .returning();
+
+    if (updated.length === 0) {
       return res.status(404).json({ error: 'Artwork not found or unauthorized' });
     }
 
-    if (categoryIds !== undefined) {
-      await query(`DELETE FROM artwork_categories WHERE artwork_id = $1`, [parseInt(id)]);
+    const createdArtwork = updated[0];
 
-      if (categoryIds && categoryIds.trim() !== '') {
-        try {
-          const parsedCategoryIds = JSON.parse(categoryIds);
-          if (Array.isArray(parsedCategoryIds) && parsedCategoryIds.length > 0) {
-            const values = parsedCategoryIds.map((categoryId: number) => `(${parseInt(id)}, ${categoryId})`).join(', ');
-            await query(`
-              INSERT INTO artwork_categories (artwork_id, category_id)
-              VALUES ${values}
-            `);
-          }
-        } catch (error) {
-          // Ignore JSON parse errors - categories are optional
-        }
+    if (categoryIds !== null && categoryIds !== undefined) {
+      await db.delete(artworkCategories)
+        .where(eq(artworkCategories.artwork_id, parseInt(id)));
+
+      const parsedIds = parseCategoryIds(categoryIds);
+      if (parsedIds.length > 0) {
+        const values = parsedIds.map((categoryId: number) => ({
+          artwork_id: parseInt(id),
+          category_id: categoryId
+        }));
+        await db.insert(artworkCategories).values(values);
       }
     }
 
-    const result = await query(`
-      SELECT 
-        a.id,
-        a.image_path,
-        a.title,
-        a.description,
-        a.type,
-        a.published,
-        a.user_id,
-        a.created_at,
-        a.updated_at,
-        COALESCE(
-          JSON_AGG(
-            JSON_BUILD_OBJECT(
-              'category', JSON_BUILD_OBJECT(
-                'id', c.id,
-                'name', c.name,
-                'user_id', c.user_id,
-                'created_at', c.created_at,
-                'updated_at', c.updated_at
-              )
-            )
-          ) FILTER (WHERE c.id IS NOT NULL), 
-          '[]'
-        ) as artwork_categories
-      FROM artworks a
-      LEFT JOIN artwork_categories ac ON a.id = ac.artwork_id
-      LEFT JOIN categories c ON ac.category_id = c.id
-      WHERE a.id = $1
-      GROUP BY a.id
-    `, [parseInt(id)]);
+    const artwork = createdArtwork;
 
-    res.status(201).json(result.rows[0]);
+    if (!artwork) {
+      return res.status(404).json({ error: 'Artwork not found or unauthorized' });
+    }
+
+    const formattedArtwork = await getArtworkWithCategories(artwork.id);
+    res.status(201).json(formattedArtwork);
   } catch (error) {
+    console.error('Error updating artwork:', error);
     res.status(500).json({ error: 'Failed to update artwork' });
   }
 });
 
+// Delete Artwork
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId;
-    const result = await query(`DELETE FROM artworks WHERE id = $1 AND user_id = $2`, [parseInt(id), userId]);
-    if (result.rowCount === 0) {
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const result = await db.delete(artworks)
+      .where(and(eq(artworks.id, parseInt(id)), eq(artworks.user_id, userId)))
+      .returning();
+
+    if (result.length === 0) {
       return res.status(404).json({ error: 'Artwork not found or unauthorized' });
     }
     res.status(204).send();
   } catch (error) {
+    console.error('Error deleting artwork:', error);
     res.status(500).json({ error: 'Failed to delete artwork' });
   }
 });

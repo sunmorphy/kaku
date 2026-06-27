@@ -54,7 +54,7 @@ export default function DevToolsProtection() {
     // Detect DevTools opening
     const detectDevTools = () => {
       const threshold = 160;
-      
+
       const checkDevTools = () => {
         if (
           window.outerHeight - window.innerHeight > threshold ||
@@ -87,7 +87,7 @@ export default function DevToolsProtection() {
     // Add event listeners
     document.addEventListener('contextmenu', disableRightClick);
     document.addEventListener('keydown', disableKeyboardShortcuts);
-    
+
     // Initialize protection
     consoleWarning();
     detectDevTools();

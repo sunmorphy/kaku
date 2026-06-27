@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useRef } from 'react';
+import { devLog } from '../utils/utils';
 
 interface AnimationItemProps {
     id: string;
@@ -8,9 +9,11 @@ interface AnimationItemProps {
     description?: string | null;
     categories: string[];
     videos: string[];
+    slug?: string | null;
+    cover_image_path?: string | null;
 }
 
-export default function AnimationItem({ id, title, description, categories, videos }: AnimationItemProps) {
+export default function AnimationItem({ id, title, description, categories, videos, slug, cover_image_path }: AnimationItemProps) {
     const totalVideos = videos.length;
     const previewVideo = videos[0];
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -19,7 +22,7 @@ export default function AnimationItem({ id, title, description, categories, vide
         if (videoRef.current) {
             videoRef.current.play().catch(err => {
                 // Ignore autoplay errors
-                console.log('Video play failed:', err);
+                devLog('Video play failed:', err);
             });
         }
     };
@@ -71,7 +74,7 @@ export default function AnimationItem({ id, title, description, categories, vide
     };
 
     return (
-        <Link key={id} href={`/animations/${id}`}>
+        <Link key={id} href={`/animations/${slug}`}>
             <motion.div
                 className="cursor-pointer p-1"
                 variants={cardVariants}
@@ -91,6 +94,7 @@ export default function AnimationItem({ id, title, description, categories, vide
                     <motion.video
                         ref={videoRef}
                         src={previewVideo}
+                        poster={cover_image_path || undefined}
                         className="absolute inset-0 w-full h-full object-cover"
                         variants={videoVariants}
                         loop
@@ -117,7 +121,6 @@ export default function AnimationItem({ id, title, description, categories, vide
                         variants={overlayVariants}
                     />
 
-                    {/* Animated border glow */}
                     <motion.div
                         className="absolute inset-0 rounded-2xl border-2 border-primary/20"
                         initial={{ opacity: 0, scale: 0.95 }}

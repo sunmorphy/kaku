@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Head from 'next/head';
 import AnimationItem from '../components/AnimationItem';
-import { getAnimations, type Animation } from '../lib/api';
+import { getAnimations, type Animation as KakuAnimation } from '../lib/api';
 import LoadingAnimation from '../components/LoadingAnimation';
 import { devLog } from '../utils/utils';
 
@@ -13,6 +13,8 @@ interface AnimationItemData {
     description?: string | null;
     categories: string[];
     videos: string[];
+    slug?: string | null;
+    cover_image_path?: string | null;
 }
 
 export default function Animations() {
@@ -28,15 +30,16 @@ export default function Animations() {
                 setLoading(true);
                 setError(null);
 
-                // Fetch animations from API
                 const animations = await getAnimations(1, 1, 100);
 
-                const animationItems: AnimationItemData[] = animations.data.map((animation: Animation) => ({
+                const animationItems: AnimationItemData[] = animations.data.map((animation: KakuAnimation) => ({
                     id: animation.id,
                     title: animation.title,
                     description: animation.description,
                     categories: animation.animation_categories?.map(cat => cat.category.name) || ['Uncategorized'],
-                    videos: animation.batch_video_path || []
+                    videos: animation.batch_video_path || [],
+                    slug: animation.slug,
+                    cover_image_path: animation.cover_image_path
                 }));
 
                 setAnimationsData(animationItems);
@@ -100,7 +103,6 @@ export default function Animations() {
                     <div className="mb-8">
                         <h1 className="text-4xl font-bold mb-4">Animations</h1>
 
-                        {/* Search */}
                         <div className="mb-6">
                             <input
                                 type="text"
@@ -111,7 +113,6 @@ export default function Animations() {
                             />
                         </div>
 
-                        {/* Category Filter */}
                         <div className="flex flex-wrap gap-3 mb-8">
                             {categories.map((category) => (
                                 <button
@@ -128,7 +129,7 @@ export default function Animations() {
                         </div>
                     </div>
 
-                    {/* Animations Grid */}
+                    {/* Animations */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-12">
                         {filteredItems.map((item) => (
                             <AnimationItem
@@ -138,6 +139,8 @@ export default function Animations() {
                                 description={item.description}
                                 categories={item.categories}
                                 videos={item.videos}
+                                slug={item.slug}
+                                cover_image_path={item.cover_image_path}
                             />
                         ))}
                     </div>

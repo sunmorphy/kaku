@@ -43,16 +43,16 @@ export async function createEmailTransporter(): Promise<nodemailer.Transporter> 
 
 export async function sendContactEmail(contactData: ContactEmailData): Promise<void> {
   const transporter = await createEmailTransporter();
-  
+
   const recipientEmail = process.env.CONTACT_RECIPIENT_EMAIL || process.env.SMTP_USER;
   if (!recipientEmail) {
     throw new Error('No recipient email configured for contact form');
   }
 
   const mailOptions = {
-    from: `"${contactData.name}" <${process.env.SMTP_USER}>`, // sender address
-    to: recipientEmail, // list of receivers
-    replyTo: contactData.email, // reply to the sender
+    from: `"${contactData.name}" <${process.env.SMTP_USER}>`,
+    to: recipientEmail,
+    replyTo: contactData.email,
     subject: contactData.subject || `New Contact Form Message from ${contactData.name}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

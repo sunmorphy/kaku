@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { Image } from '@imagekit/next';
+import Image from 'next/image';
 import ContactForm from '../components/ContactForm';
 import { getProfile, type Profile } from '../lib/api';
 import RichTextContent from '../components/RichTextContent';
@@ -45,7 +45,7 @@ export default function About() {
           )
 
           profileData.socials?.forEach((social) => {
-            // Parse the social format: "iconName|https://url" or just "https://url"
+            // Parse the social
             const parts = social.split('|');
             const iconName = parts.length > 1 ? parts[0] : 'link';
             const url = parts.length > 1 ? parts[1] : social;
@@ -102,19 +102,19 @@ export default function About() {
             {/* Profile Image */}
             <div className="xl:w-1/3 flex justify-center xl:justify-end">
               <div className="relative w-64 h-64 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-                <Image
-                  urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
-                  src={profile?.profile_image_path!}
-                  alt={profile?.name!}
-                  fill
-                  className="object-cover"
-                />
+                {profile?.profile_image_path && (
+                  <Image
+                    src={profile.profile_image_path}
+                    alt={profile.name!}
+                    fill
+                    className="object-cover"
+                  />
+                )}
               </div>
             </div>
 
             {/* Content */}
             <div className="xl:w-2/3 space-y-8">
-              {/* Introduction */}
               <div>
                 <h2 className="text-2xl font-semibold mb-4">Hi, I'm {profile?.name}</h2>
                 <RichTextContent
@@ -123,7 +123,6 @@ export default function About() {
                 />
               </div>
 
-              {/* Call to Action */}
               <div className="pt-4">
                 <p className="text-gray-600 italic">
                   I'm always open to new opportunities and collaborations. Feel free to reach out!
@@ -132,12 +131,10 @@ export default function About() {
 
               {/* Contact Section */}
               <div className="flex flex-col xl:grid xl:grid-cols-2 gap-8">
-                {/* Contact Form - First on desktop (left), Last on mobile (bottom) */}
                 <div className="order-2 xl:order-1">
                   <ContactForm />
                 </div>
 
-                {/* Contact Information - Second on desktop (right), First on mobile (top) */}
                 <div className="order-1 xl:order-2">
                   <h3 className="text-xl font-semibold mb-4">Let's Connect</h3>
                   <div className="space-y-3">
