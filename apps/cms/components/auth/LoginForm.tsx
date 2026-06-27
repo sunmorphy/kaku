@@ -32,7 +32,7 @@ export default function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Login to Meng</CardTitle>
+          <CardTitle>Login to Kaku Content Management</CardTitle>
           <CardDescription>
             Enter your credentials to access the content management system
           </CardDescription>

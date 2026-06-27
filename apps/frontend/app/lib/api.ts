@@ -1,6 +1,6 @@
 import { devLog } from "../utils/utils";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://mengbe.vercel.app/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 import {
   Project,
