@@ -1,0 +1,22 @@
+{
+  "name": "kaku-portfolio-workspace",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run scripts/dev.ts",
+    "build": "bun --filter \"*\" build",
+    "type-check": "bun --filter \"*\" type-check"
+  },
+  "resolutions": {
+    "@types/express": "^4.17.21",
+    "@types/express-serve-static-core": "^4.19.8",
+    "@types/multer/@types/express": "^4.17.21"
+  },
+  "overrides": {
+    "@types/express": "^4.17.21",
+    "@types/express-serve-static-core": "^4.19.8"
+  }
+}

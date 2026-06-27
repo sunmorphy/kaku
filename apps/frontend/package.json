@@ -1,0 +1,42 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@kaku/types": "workspace:*",
+    "@imagekit/next": "^2.1.2",
+    "@phosphor-icons/web": "^2.1.2",
+    "eslint-config-next": "^16.0.10",
+    "framer-motion": "^12.23.12",
+    "isomorphic-dompurify": "^2.26.0",
+    "lottie-react": "^2.4.1",
+    "lottie-web": "^5.13.0",
+    "next": "^16.0.10",
+    "postcss": "^8.5.6",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-lottie-player": "^2.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.11",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "baseline-browser-mapping": "^2.10.10",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11",
+    "not op_mini all"
+  ]
+}
