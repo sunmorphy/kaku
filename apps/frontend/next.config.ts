@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'kaku.andpuji27.workers.dev',
+        hostname: 'media.rahmadwin.art',
         port: '',
         pathname: '/**',
       },

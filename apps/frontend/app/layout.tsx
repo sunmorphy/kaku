@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     description: "Rahma Dwin's portfolio.",
     type: "website",
     siteName: "Rahma Dwin Portfolio",
-    images: "https://kaku.andpuji27.workers.dev/kaku/banner_1756263185853_Rahma_Dwin_ESMlnH8Mz.jpg"
+    images: "https://media.rahmadwin.art/kaku/banner_1756263185853_Rahma_Dwin_ESMlnH8Mz.jpg"
   },
   robots: {
     index: true,
