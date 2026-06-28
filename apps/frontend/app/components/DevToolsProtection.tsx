@@ -53,6 +53,12 @@ export default function DevToolsProtection() {
 
     // Detect DevTools opening
     const detectDevTools = () => {
+      // Mobile browsers do not have built-in dockable DevTools. Inspecting is done via remote debugging
+      // which does not resize the viewport. Skipping this check on mobile avoids false positives
+      // caused by the virtual keyboard or dynamic toolbars/address bars (e.g., Safari).
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobile) return;
+
       const threshold = 160;
 
       const checkDevTools = () => {
