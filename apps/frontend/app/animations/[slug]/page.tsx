@@ -130,6 +130,7 @@ export default function AnimationDetail({ params }: Props) {
                             <video
                                 src={videoPath}
                                 controls
+                                playsInline
                                 poster={animation.cover_image_path || undefined}
                                 className="w-full h-auto"
                                 preload="metadata"

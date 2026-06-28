@@ -57,7 +57,7 @@ export default function AnimationItem({ id, title, description, categories, vide
     return (
         <Link key={id} href={`/animations/${slug}`}>
             <motion.div
-                className="cursor-pointer p-1"
+                className="cursor-pointer bg-white rounded-3xl border border-gray-100 p-3 flex flex-col h-[440px]"
                 variants={cardVariants}
                 initial="initial"
                 whileHover="hover"
@@ -69,7 +69,7 @@ export default function AnimationItem({ id, title, description, categories, vide
                 }}
             >
                 {/* Video Preview */}
-                <motion.div className="relative w-full h-96 overflow-hidden rounded-2xl bg-gray-100 border-2 border-transparent">
+                <motion.div className="relative w-full h-[330px] overflow-hidden rounded-2xl bg-gray-100">
                     {cover_image_path ? (
                         <motion.img
                             src={cover_image_path}
@@ -120,38 +120,36 @@ export default function AnimationItem({ id, title, description, categories, vide
                 </motion.div>
 
                 <motion.div
-                    className="my-8 px-2"
+                    className="mt-3 px-1 flex flex-col justify-between flex-1"
                     variants={textVariants}
                 >
-                    <div className="mb-4">
+                    <div>
                         <motion.h3
-                            className="text-xl font-semibold mb-4"
+                            className="text-lg font-semibold line-clamp-1 mb-1"
                             variants={titleVariants}
                         >
                             {title}
                         </motion.h3>
-                        {description && (
-                            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                                {description}
-                            </p>
-                        )}
-                        <div className="flex flex-wrap gap-2">
-                            {categories.map((category, index) => (
-                                <motion.div
-                                    key={index}
-                                    className="inline-flex items-center px-3 pt-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200"
-                                    whileHover={{
-                                        backgroundColor: "rgba(var(--color-primary), 0.1)",
-                                        borderColor: "rgba(var(--color-primary), 0.3)",
-                                        color: "rgba(var(--color-primary), 0.8)",
-                                        scale: 1.02
-                                    }}
-                                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                                >
-                                    {category}
-                                </motion.div>
-                            ))}
-                        </div>
+                        <p className="text-gray-500 text-xs line-clamp-1 mb-2">
+                            {description || '\u00A0'}
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 overflow-hidden max-h-[26px]">
+                        {categories.slice(0, 3).map((category, index) => (
+                            <motion.div
+                                key={index}
+                                className="inline-flex items-center px-3 pt-0.5 pb-1 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700 border border-gray-200"
+                                whileHover={{
+                                    backgroundColor: "rgba(var(--color-primary), 0.1)",
+                                    borderColor: "rgba(var(--color-primary), 0.3)",
+                                    color: "rgba(var(--color-primary), 0.8)",
+                                    scale: 1.02
+                                }}
+                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            >
+                                {category}
+                            </motion.div>
+                        ))}
                     </div>
                 </motion.div>
             </motion.div>

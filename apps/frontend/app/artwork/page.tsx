@@ -146,7 +146,7 @@ export default function Artwork() {
 
   return (
     <div className="min-h-screen p-8 animate-fade-in">
-      <div className="mx-auto lg:w-3/5 w-full">
+      <div className="mx-auto max-w-7xl w-full">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-4">Artwork</h1>

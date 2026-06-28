@@ -14,13 +14,13 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="flex gap-12">
+    <nav className="flex gap-4 sm:gap-8 md:gap-12 justify-center w-full px-4 sm:px-0">
       {navItems.map((item) => {
         const isActive = pathname === item.href;
         return (
           <Link
             key={item.href}
-            className={`text-sm tracking-widest transition-colors relative ${isActive
+            className={`text-xs sm:text-sm tracking-wider sm:tracking-widest transition-colors relative ${isActive
               ? 'text-primary font-medium'
               : 'hover:text-primary'
               }`}

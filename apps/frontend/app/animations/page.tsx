@@ -98,7 +98,7 @@ export default function Animations() {
                 <meta property="og:description" content="Browse Kaku's animation portfolio featuring video projects." />
             </Head>
             <div className="min-h-screen p-8 animate-fade-in">
-                <div className="mx-auto lg:w-3/5 w-full">
+                <div className="mx-auto max-w-7xl w-full">
                     {/* Header */}
                     <div className="mb-8">
                         <h1 className="text-4xl font-bold mb-4">Animations</h1>
@@ -130,7 +130,7 @@ export default function Animations() {
                     </div>
 
                     {/* Animations */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-12">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                         {filteredItems.map((item) => (
                             <AnimationItem
                                 key={item.id}
