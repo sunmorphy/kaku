@@ -26,21 +26,24 @@ export default function AnimationManager() {
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 25
+  interface VideoItem {
+    id: string;
+    type: 'existing' | 'new';
+    url: string;
+    file?: File;
+  }
+
   const [formData, setFormData] = useState({
     coverImage: null as File | null,
     title: '',
     description: '',
     slug: '',
     categoryIds: [] as number[],
-    videos: [] as File[],
     published: true,
   })
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
-  const [videoPreviews, setVideoPreviews] = useState<string[]>([])
-  const [existingVideos, setExistingVideos] = useState<string[]>([]) // Track original videos from server
-  const [removedVideoIndices, setRemovedVideoIndices] = useState<Set<number>>(new Set()) // Track which original videos to remove
-  const [modifiedVideos, setModifiedVideos] = useState<Map<number, File>>(new Map()) // Track which videos are modified by index
-  const [addedVideos, setAddedVideos] = useState<File[]>([]) // Track newly added videos
+  const [videosList, setVideosList] = useState<VideoItem[]>([])
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; animationId: number | null }>({
     open: false,
     animationId: null,
@@ -105,7 +108,7 @@ export default function AnimationManager() {
   }
 
   const createAnimation = async () => {
-    if (!formData.title.trim() || formData.videos.length === 0) return
+    if (!formData.title.trim() || videosList.length === 0) return
 
     setSubmitting(true)
     try {
@@ -115,9 +118,19 @@ export default function AnimationManager() {
         formDataToSend.append('coverImage', compressedCoverImage)
       }
 
+      const filesToUpload: File[] = []
+      const videoOrder = videosList.map(item => {
+        if (item.type === 'new' && item.file) {
+          const fileIndex = filesToUpload.length
+          filesToUpload.push(item.file)
+          return `new-${fileIndex}`
+        }
+        return item.url
+      })
+
       // Compress all videos and wait for completion
       const compressedVideos = await Promise.all(
-        formData.videos.map(video => compressVideo(video))
+        filesToUpload.map(video => compressVideo(video))
       )
 
       // Append all compressed videos to FormData
@@ -125,6 +138,7 @@ export default function AnimationManager() {
         formDataToSend.append('videos', compressedVideo)
       })
 
+      formDataToSend.append('videoOrder', JSON.stringify(videoOrder))
       formDataToSend.append('title', formData.title)
       formDataToSend.append('description', formData.description)
       formDataToSend.append('slug', formData.slug)
@@ -157,38 +171,26 @@ export default function AnimationManager() {
         formDataToSend.append('coverImage', compressedCoverImage)
       }
 
-      // Compress modified videos and wait for completion
-      if (modifiedVideos.size > 0) {
-        const modifiedVideosArray = Array.from(modifiedVideos.entries())
-        const compressedModified = await Promise.all(
-          modifiedVideosArray.map(([_, file]) => compressVideo(file))
-        )
+      const filesToUpload: File[] = []
+      const videoOrder = videosList.map(item => {
+        if (item.type === 'new' && item.file) {
+          const fileIndex = filesToUpload.length
+          filesToUpload.push(item.file)
+          return `new-${fileIndex}`
+        }
+        return item.url
+      })
 
-        // Append compressed modified videos with their indices
-        compressedModified.forEach((compressedVideo, i) => {
-          const [index] = modifiedVideosArray[i]
-          formDataToSend.append('modifiedVideos', compressedVideo)
-          formDataToSend.append('modifiedVideoIndices', index.toString())
-        })
-      }
+      // Compress modified/added videos and wait for completion
+      const compressedVideos = await Promise.all(
+        filesToUpload.map(file => compressVideo(file))
+      )
 
-      // Compress newly added videos and wait for completion
-      if (addedVideos.length > 0) {
-        const compressedAdded = await Promise.all(
-          addedVideos.map(file => compressVideo(file))
-        )
+      compressedVideos.forEach(compressedVideo => {
+        formDataToSend.append('videos', compressedVideo)
+      })
 
-        // Append all compressed added videos
-        compressedAdded.forEach(compressedVideo => {
-          formDataToSend.append('addedVideos', compressedVideo)
-        })
-      }
-
-      // Send indices of removed existing videos
-      if (removedVideoIndices.size > 0) {
-        formDataToSend.append('removedVideoIndices', JSON.stringify(Array.from(removedVideoIndices)))
-      }
-
+      formDataToSend.append('videoOrder', JSON.stringify(videoOrder))
       formDataToSend.append('title', formData.title)
       formDataToSend.append('description', formData.description)
       formDataToSend.append('slug', formData.slug)
@@ -234,15 +236,14 @@ export default function AnimationManager() {
       description: animation.description || '',
       slug: animation.slug || '',
       categoryIds: animation.animation_categories?.map(pc => pc.category.id) || [],
-      videos: [],
       published: animation.published ?? true,
     })
     setCoverImagePreview(animation.cover_image_path || null)
-    setExistingVideos(animation.batch_video_path)
-    setVideoPreviews(animation.batch_video_path)
-    setRemovedVideoIndices(new Set())
-    setModifiedVideos(new Map())
-    setAddedVideos([])
+    setVideosList(animation.batch_video_path.map((url, i) => ({
+      id: `existing-${i}-${url}`,
+      type: 'existing',
+      url
+    })))
     setShowCreateForm(true)
   }
 
@@ -253,15 +254,10 @@ export default function AnimationManager() {
       description: '',
       slug: '',
       categoryIds: [],
-      videos: [],
       published: true,
     })
     setCoverImagePreview(null)
-    setVideoPreviews([])
-    setExistingVideos([])
-    setRemovedVideoIndices(new Set())
-    setModifiedVideos(new Map())
-    setAddedVideos([])
+    setVideosList([])
     setShowCreateForm(false)
     setEditingId(null)
   }
@@ -296,59 +292,47 @@ export default function AnimationManager() {
 
     if (typeof index === 'number') {
       const file = files[0]
-      const newPreviews = [...videoPreviews]
-      const newModifiedVideos = new Map(modifiedVideos)
-
-      newModifiedVideos.set(index, file)
-      setModifiedVideos(newModifiedVideos)
-
       const videoUrl = URL.createObjectURL(file)
-      newPreviews[index] = videoUrl
-      setVideoPreviews(newPreviews)
+      setVideosList(prev => prev.map((item, i) => i === index ? {
+        ...item,
+        type: 'new',
+        url: videoUrl,
+        file
+      } : item))
     } else {
-      const currentPreviewCount = videoPreviews.length
-      const newPreviews = [...videoPreviews]
-
-      if (editingId) {
-        const newAddedVideos = [...addedVideos, ...files]
-        setAddedVideos(newAddedVideos)
-      } else {
-        const newVideos = [...formData.videos, ...files]
-        setFormData({ ...formData, videos: newVideos })
-      }
-
-      files.forEach((file, fileIndex) => {
-        const videoUrl = URL.createObjectURL(file)
-        newPreviews[currentPreviewCount + fileIndex] = videoUrl
-      })
-
-      setVideoPreviews(newPreviews)
+      const newItems = files.map((file, fileIndex) => ({
+        id: `new-${Date.now()}-${fileIndex}-${file.name}`,
+        type: 'new' as const,
+        url: URL.createObjectURL(file),
+        file
+      }))
+      setVideosList(prev => [...prev, ...newItems])
     }
   }
 
   const removeVideo = (indexToRemove: number) => {
-    if (editingId) {
-      if (indexToRemove < existingVideos.length) {
-        const newRemovedIndices = new Set(removedVideoIndices)
-        newRemovedIndices.add(indexToRemove)
-        setRemovedVideoIndices(newRemovedIndices)
-        const newModifiedVideos = new Map(modifiedVideos)
-        newModifiedVideos.delete(indexToRemove)
-        setModifiedVideos(newModifiedVideos)
-      } else {
-        const addedImageIndex = indexToRemove - existingVideos.length
-        const newAddedVideos = addedVideos.filter((_, index) => index !== addedImageIndex)
-        setAddedVideos(newAddedVideos)
-        const newPreviews = videoPreviews.filter((_, index) => index !== indexToRemove)
-        setVideoPreviews(newPreviews)
-      }
-    } else {
-      const newVideos = formData.videos.filter((_, index) => index !== indexToRemove)
-      const newPreviews = videoPreviews.filter((_, index) => index !== indexToRemove)
+    setVideosList(prev => prev.filter((_, index) => index !== indexToRemove))
+  }
 
-      setFormData({ ...formData, videos: newVideos })
-      setVideoPreviews(newPreviews)
-    }
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (draggedIndex === null || draggedIndex === index) return
+
+    const newList = [...videosList]
+    const draggedItem = newList[draggedIndex]
+    newList.splice(draggedIndex, 1)
+    newList.splice(index, 0, draggedItem)
+    setDraggedIndex(index)
+    setVideosList(newList)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null)
   }
 
   useEffect(() => {
@@ -591,51 +575,57 @@ export default function AnimationManager() {
                 </div>
 
                 {/* Video Previews */}
-                {videoPreviews.length > 0 && (
+                {videosList.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {videoPreviews
-                      .map((preview, index) => ({ preview, index }))
-                      .filter(({ index }) => !removedVideoIndices.has(index))
-                      .map(({ preview, index }) => (
-                        <div key={index} className="relative group">
-                          <video
-                            src={preview}
-                            className="w-full aspect-square object-cover rounded-lg border border-gray-200"
-                            controls={false}
-                            muted
-                            loop
-                            onMouseEnter={(e) => e.currentTarget.play()}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.pause()
-                              e.currentTarget.currentTime = 0
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeVideo(index)}
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => document.getElementById(`video-${index}`)?.click()}
-                            className="absolute bottom-1 right-1 bg-blue-500 text-white rounded-full px-2 py-1 text-xs hover:bg-blue-600 transition-colors shadow-lg"
-                          >
-                            Change
-                          </button>
-                          <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
-                            {index + 1}
-                          </div>
-                          <input
-                            id={`video-${index}`}
-                            type="file"
-                            accept="video/*"
-                            onChange={(e) => handleVideoChange(e, index)}
-                            className="hidden"
-                          />
+                    {videosList.map((item, index) => (
+                      <div
+                        key={item.id}
+                        draggable={!submitting}
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDragEnd={handleDragEnd}
+                        className={`relative group border border-gray-200 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing transition-all ${
+                          draggedIndex === index ? 'opacity-40 scale-95 border-blue-500 border-2' : 'opacity-100 hover:shadow-md'
+                        }`}
+                      >
+                        <video
+                          src={item.url}
+                          className="w-full aspect-square object-cover"
+                          controls={false}
+                          muted
+                          loop
+                          onMouseEnter={(e) => e.currentTarget.play()}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.pause()
+                            e.currentTarget.currentTime = 0
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeVideo(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById(`video-${index}`)?.click()}
+                          className="absolute bottom-1 right-1 bg-blue-500 text-white rounded-full px-2 py-1 text-xs hover:bg-blue-600 transition-colors shadow-lg"
+                        >
+                          Change
+                        </button>
+                        <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                          {index + 1}
                         </div>
-                      ))}
+                        <input
+                          id={`video-${index}`}
+                          type="file"
+                          accept="video/*"
+                          onChange={(e) => handleVideoChange(e, index)}
+                          className="hidden"
+                        />
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -681,7 +671,7 @@ export default function AnimationManager() {
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   onClick={() => editingId ? updateAnimation(editingId) : createAnimation()}
-                  disabled={submitting || !formData.title.trim() || (!editingId && formData.videos.length === 0 && videoPreviews.length === 0)}
+                  disabled={submitting || !formData.title.trim() || videosList.length === 0}
                   className="w-full sm:w-auto"
                 >
                   {submitting ? (

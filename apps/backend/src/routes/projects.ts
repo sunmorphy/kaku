@@ -397,9 +397,27 @@ router.post('/', authenticateToken, upload.fields([
       })
     );
 
+    let finalImageUrls = imageUrls;
+    if (req.body.imageOrder) {
+      try {
+        const order = JSON.parse(req.body.imageOrder) as string[];
+        if (Array.isArray(order) && order.length > 0) {
+          finalImageUrls = order.map(item => {
+            if (item.startsWith('new-')) {
+              const index = parseInt(item.split('-')[1]);
+              return imageUrls[index];
+            }
+            return item;
+          }).filter(Boolean);
+        }
+      } catch (error) {
+        console.error('Error parsing imageOrder in POST:', error);
+      }
+    }
+
     const inserted = await db.insert(projects)
       .values({
-        batch_image_path: imageUrls,
+        batch_image_path: finalImageUrls,
         cover_image_path: coverImageUrl,
         title,
         description,
@@ -435,6 +453,7 @@ router.post('/', authenticateToken, upload.fields([
 
 // Update project
 router.put('/:id', authenticateToken, upload.fields([
+  { name: 'images', maxCount: 10 },
   { name: 'modifiedImages', maxCount: 10 },
   { name: 'addedImages', maxCount: 10 },
   { name: 'coverImage', maxCount: 1 }
@@ -466,21 +485,6 @@ router.put('/:id', authenticateToken, upload.fields([
     }
 
     let currentImages = [...currentProjectResult[0].batch_image_path];
-    let removedIndices: number[] = [];
-
-    // Parse removed image indices
-    if (req.body.removedImageIndices) {
-      try {
-        removedIndices = JSON.parse(req.body.removedImageIndices);
-        if (!Array.isArray(removedIndices)) {
-          removedIndices = [];
-        }
-      } catch (error) {
-        console.error('Error parsing removedImageIndices:', error);
-        removedIndices = [];
-      }
-    }
-
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
     // Handle cover image
@@ -492,50 +496,93 @@ router.put('/:id', authenticateToken, upload.fields([
       coverImageUrl = r2Result.url;
     }
 
-    // Handle modifid images BEFORE removing images
-    const modifiedImages = files?.modifiedImages || [];
-    if (modifiedImages.length > 0 && req.body.modifiedImageIndices) {
+    // Check if new unified imageOrder format is used
+    if (req.body.imageOrder) {
       try {
-        const modifiedIndices = req.body.modifiedImageIndices;
-        const indices = Array.isArray(modifiedIndices) ? modifiedIndices : [modifiedIndices];
+        const order = JSON.parse(req.body.imageOrder) as string[];
+        if (Array.isArray(order)) {
+          const newUploadedImages = files?.images || [];
+          const username = req.user?.username!;
+          const newUrls = await Promise.all(
+            newUploadedImages.map(async (file) => {
+              const r2Result = await uploadToR2(file.buffer, file.originalname, username, 'projects');
+              return r2Result.url;
+            })
+          );
 
-        const username = req.user?.username!;
-
-        for (let i = 0; i < modifiedImages.length && i < indices.length; i++) {
-          const file = modifiedImages[i];
-          const originalIndex = parseInt(indices[i]);
-
-          if (!removedIndices.includes(originalIndex) &&
-            originalIndex >= 0 && originalIndex < currentImages.length) {
-            const r2Result = await uploadToR2(file.buffer, file.originalname, username, 'projects');
-            currentImages[originalIndex] = r2Result.url;
-          }
+          currentImages = order.map(item => {
+            if (item.startsWith('new-')) {
+              const index = parseInt(item.split('-')[1]);
+              return newUrls[index];
+            }
+            return item;
+          }).filter(Boolean);
         }
       } catch (error) {
-        console.error('Error processing modified images:', error);
+        console.error('Error parsing imageOrder in PUT:', error);
       }
-    }
+    } else {
+      // OLD LOGIC (Fallback)
+      let removedIndices: number[] = [];
 
-    // Handle removed images AFTER modifications (reverse order)
-    if (removedIndices.length > 0) {
-      removedIndices.sort((a, b) => b - a).forEach(index => {
-        if (index >= 0 && index < currentImages.length) {
-          currentImages.splice(index, 1);
+      // Parse removed image indices
+      if (req.body.removedImageIndices) {
+        try {
+          removedIndices = JSON.parse(req.body.removedImageIndices);
+          if (!Array.isArray(removedIndices)) {
+            removedIndices = [];
+          }
+        } catch (error) {
+          console.error('Error parsing removedImageIndices:', error);
+          removedIndices = [];
         }
-      });
-    }
+      }
 
-    // Handle newly added images
-    const addedImages = files?.addedImages || [];
-    if (addedImages.length > 0) {
-      const username = req.user?.username!;
-      const addedImageUrls = await Promise.all(
-        addedImages.map(async (file) => {
-          const r2Result = await uploadToR2(file.buffer, file.originalname, username, 'projects');
-          return r2Result.url;
-        })
-      );
-      currentImages.push(...addedImageUrls);
+      // Handle modified images BEFORE removing images
+      const modifiedImages = files?.modifiedImages || [];
+      if (modifiedImages.length > 0 && req.body.modifiedImageIndices) {
+        try {
+          const modifiedIndices = req.body.modifiedImageIndices;
+          const indices = Array.isArray(modifiedIndices) ? modifiedIndices : [modifiedIndices];
+
+          const username = req.user?.username!;
+
+          for (let i = 0; i < modifiedImages.length && i < indices.length; i++) {
+            const file = modifiedImages[i];
+            const originalIndex = parseInt(indices[i]);
+
+            if (!removedIndices.includes(originalIndex) &&
+              originalIndex >= 0 && originalIndex < currentImages.length) {
+              const r2Result = await uploadToR2(file.buffer, file.originalname, username, 'projects');
+              currentImages[originalIndex] = r2Result.url;
+            }
+          }
+        } catch (error) {
+          console.error('Error processing modified images:', error);
+        }
+      }
+
+      // Handle removed images AFTER modifications (reverse order)
+      if (removedIndices.length > 0) {
+        removedIndices.sort((a, b) => b - a).forEach(index => {
+          if (index >= 0 && index < currentImages.length) {
+            currentImages.splice(index, 1);
+          }
+        });
+      }
+
+      // Handle newly added images
+      const addedImages = files?.addedImages || [];
+      if (addedImages.length > 0) {
+        const username = req.user?.username!;
+        const addedImageUrls = await Promise.all(
+          addedImages.map(async (file) => {
+            const r2Result = await uploadToR2(file.buffer, file.originalname, username, 'projects');
+            return r2Result.url;
+          })
+        );
+        currentImages.push(...addedImageUrls);
+      }
     }
 
     const updateFields: any = {

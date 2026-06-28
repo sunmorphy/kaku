@@ -377,9 +377,27 @@ router.post('/', authenticateToken, animationUpload.fields([
       })
     );
 
+    let finalVideoUrls = videoUrls;
+    if (req.body.videoOrder) {
+      try {
+        const order = JSON.parse(req.body.videoOrder) as string[];
+        if (Array.isArray(order) && order.length > 0) {
+          finalVideoUrls = order.map(item => {
+            if (item.startsWith('new-')) {
+              const index = parseInt(item.split('-')[1]);
+              return videoUrls[index];
+            }
+            return item;
+          }).filter(Boolean);
+        }
+      } catch (error) {
+        console.error('Error parsing videoOrder in POST:', error);
+      }
+    }
+
     const inserted = await db.insert(animations)
       .values({
-        batch_video_path: videoUrls,
+        batch_video_path: finalVideoUrls,
         cover_image_path: coverImageUrl,
         title,
         description,
@@ -414,6 +432,7 @@ router.post('/', authenticateToken, animationUpload.fields([
 
 // Update animation
 router.put('/:id', authenticateToken, animationUpload.fields([
+  { name: 'videos', maxCount: 10 },
   { name: 'modifiedVideos', maxCount: 10 },
   { name: 'addedVideos', maxCount: 10 },
   { name: 'coverImage', maxCount: 1 }
@@ -440,21 +459,6 @@ router.put('/:id', authenticateToken, animationUpload.fields([
     }
 
     let currentVideos = [...currentAnimationResult[0].batch_video_path];
-    let removedIndices: number[] = [];
-
-    // Parse removed video indices
-    if (req.body.removedVideoIndices) {
-      try {
-        removedIndices = JSON.parse(req.body.removedVideoIndices);
-        if (!Array.isArray(removedIndices)) {
-          removedIndices = [];
-        }
-      } catch (error) {
-        console.error('Error parsing removedVideoIndices:', error);
-        removedIndices = [];
-      }
-    }
-
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
     const coverImage = files?.coverImage?.[0] || null;
@@ -465,50 +469,93 @@ router.put('/:id', authenticateToken, animationUpload.fields([
       coverImageUrl = r2Result.url;
     }
 
-    // Handle modified videos BEFORE removing videos
-    const modifiedVideos = files?.modifiedVideos || [];
-    if (modifiedVideos.length > 0 && req.body.modifiedVideoIndices) {
+    // Check if new unified videoOrder format is used
+    if (req.body.videoOrder) {
       try {
-        const modifiedIndices = req.body.modifiedVideoIndices;
-        const indices = Array.isArray(modifiedIndices) ? modifiedIndices : [modifiedIndices];
+        const order = JSON.parse(req.body.videoOrder) as string[];
+        if (Array.isArray(order)) {
+          const newUploadedVideos = files?.videos || [];
+          const username = req.user?.username!;
+          const newUrls = await Promise.all(
+            newUploadedVideos.map(async (file) => {
+              const r2Result = await uploadToR2(file.buffer, file.originalname, username, 'animations');
+              return r2Result.url;
+            })
+          );
 
-        const username = req.user?.username!;
-
-        for (let i = 0; i < modifiedVideos.length && i < indices.length; i++) {
-          const file = modifiedVideos[i];
-          const originalIndex = parseInt(indices[i]);
-
-          if (!removedIndices.includes(originalIndex) &&
-            originalIndex >= 0 && originalIndex < currentVideos.length) {
-            const r2Result = await uploadToR2(file.buffer, file.originalname, username, 'animations');
-            currentVideos[originalIndex] = r2Result.url;
-          }
+          currentVideos = order.map(item => {
+            if (item.startsWith('new-')) {
+              const index = parseInt(item.split('-')[1]);
+              return newUrls[index];
+            }
+            return item;
+          }).filter(Boolean);
         }
       } catch (error) {
-        console.error('Error processing modified videos:', error);
+        console.error('Error parsing videoOrder in PUT:', error);
       }
-    }
+    } else {
+      // OLD LOGIC (Fallback)
+      let removedIndices: number[] = [];
 
-    // Handle removed videos AFTER modifications (reverse order)
-    if (removedIndices.length > 0) {
-      removedIndices.sort((a, b) => b - a).forEach(index => {
-        if (index >= 0 && index < currentVideos.length) {
-          currentVideos.splice(index, 1);
+      // Parse removed video indices
+      if (req.body.removedVideoIndices) {
+        try {
+          removedIndices = JSON.parse(req.body.removedVideoIndices);
+          if (!Array.isArray(removedIndices)) {
+            removedIndices = [];
+          }
+        } catch (error) {
+          console.error('Error parsing removedVideoIndices:', error);
+          removedIndices = [];
         }
-      });
-    }
+      }
 
-    // Handle newly added videos
-    const addedVideos = files?.addedVideos || [];
-    if (addedVideos.length > 0) {
-      const username = req.user?.username!;
-      const addedVideoUrls = await Promise.all(
-        addedVideos.map(async (file) => {
-          const r2Result = await uploadToR2(file.buffer, file.originalname, username, 'animations');
-          return r2Result.url;
-        })
-      );
-      currentVideos.push(...addedVideoUrls);
+      // Handle modified videos BEFORE removing videos
+      const modifiedVideos = files?.modifiedVideos || [];
+      if (modifiedVideos.length > 0 && req.body.modifiedVideoIndices) {
+        try {
+          const modifiedIndices = req.body.modifiedVideoIndices;
+          const indices = Array.isArray(modifiedIndices) ? modifiedIndices : [modifiedIndices];
+
+          const username = req.user?.username!;
+
+          for (let i = 0; i < modifiedVideos.length && i < indices.length; i++) {
+            const file = modifiedVideos[i];
+            const originalIndex = parseInt(indices[i]);
+
+            if (!removedIndices.includes(originalIndex) &&
+              originalIndex >= 0 && originalIndex < currentVideos.length) {
+              const r2Result = await uploadToR2(file.buffer, file.originalname, username, 'animations');
+              currentVideos[originalIndex] = r2Result.url;
+            }
+          }
+        } catch (error) {
+          console.error('Error processing modified videos:', error);
+        }
+      }
+
+      // Handle removed videos AFTER modifications (reverse order)
+      if (removedIndices.length > 0) {
+        removedIndices.sort((a, b) => b - a).forEach(index => {
+          if (index >= 0 && index < currentVideos.length) {
+            currentVideos.splice(index, 1);
+          }
+        });
+      }
+
+      // Handle newly added videos
+      const addedVideos = files?.addedVideos || [];
+      if (addedVideos.length > 0) {
+        const username = req.user?.username!;
+        const addedVideoUrls = await Promise.all(
+          addedVideos.map(async (file) => {
+            const r2Result = await uploadToR2(file.buffer, file.originalname, username, 'animations');
+            return r2Result.url;
+          })
+        );
+        currentVideos.push(...addedVideoUrls);
+      }
     }
 
     const updateFields: any = {

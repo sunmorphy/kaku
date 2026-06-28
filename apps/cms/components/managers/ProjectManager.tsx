@@ -27,22 +27,25 @@ export default function ProjectManager() {
 
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 25
+  interface ImageItem {
+    id: string;
+    type: 'existing' | 'new';
+    url: string;
+    file?: File;
+  }
+
   const [formData, setFormData] = useState({
     coverImage: null as File | null,
     title: '',
     description: '',
     slug: '',
     categoryIds: [] as number[],
-    images: [] as File[],
     type: 'portfolio' as 'portfolio' | 'scratch',
     published: true,
   })
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
-  const [imagePreviews, setImagePreviews] = useState<string[]>([])
-  const [existingImages, setExistingImages] = useState<string[]>([]) // Track original images from server
-  const [removedImageIndices, setRemovedImageIndices] = useState<Set<number>>(new Set()) // Track which original images to remove
-  const [modifiedImages, setModifiedImages] = useState<Map<number, File>>(new Map()) // Track which images are modified by index
-  const [addedImages, setAddedImages] = useState<File[]>([]) // Track newly added images
+  const [imagesList, setImagesList] = useState<ImageItem[]>([])
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; projectId: number | null }>({
     open: false,
     projectId: null,
@@ -107,7 +110,7 @@ export default function ProjectManager() {
   }
 
   const createProject = async () => {
-    if (!formData.title.trim() || formData.images.length === 0) return
+    if (!formData.title.trim() || imagesList.length === 0) return
 
     setSubmitting(true)
     try {
@@ -117,9 +120,19 @@ export default function ProjectManager() {
         formDataToSend.append('coverImage', compressedCoverImage)
       }
 
+      const filesToUpload: File[] = []
+      const imageOrder = imagesList.map(item => {
+        if (item.type === 'new' && item.file) {
+          const fileIndex = filesToUpload.length
+          filesToUpload.push(item.file)
+          return `new-${fileIndex}`
+        }
+        return item.url
+      })
+
       // Compress all images and wait for completion
       const compressedImages = await Promise.all(
-        formData.images.map(image => compressImage(image))
+        filesToUpload.map(image => compressImage(image))
       )
 
       // Append all compressed images to FormData
@@ -127,6 +140,7 @@ export default function ProjectManager() {
         formDataToSend.append('images', compressedImage)
       })
 
+      formDataToSend.append('imageOrder', JSON.stringify(imageOrder))
       formDataToSend.append('title', formData.title)
       formDataToSend.append('description', formData.description)
       formDataToSend.append('slug', formData.slug)
@@ -160,38 +174,25 @@ export default function ProjectManager() {
         formDataToSend.append('coverImage', compressedCoverImage)
       }
 
-      // Compress modified images and wait for completion
-      if (modifiedImages.size > 0) {
-        const modifiedImagesArray = Array.from(modifiedImages.entries())
-        const compressedModified = await Promise.all(
-          modifiedImagesArray.map(([_, file]) => compressImage(file))
-        )
+      const filesToUpload: File[] = []
+      const imageOrder = imagesList.map(item => {
+        if (item.type === 'new' && item.file) {
+          const fileIndex = filesToUpload.length
+          filesToUpload.push(item.file)
+          return `new-${fileIndex}`
+        }
+        return item.url
+      })
 
-        // Append compressed modified images with their indices
-        compressedModified.forEach((compressedImage, i) => {
-          const [index] = modifiedImagesArray[i]
-          formDataToSend.append('modifiedImages', compressedImage)
-          formDataToSend.append('modifiedImageIndices', index.toString())
-        })
-      }
+      const compressedImages = await Promise.all(
+        filesToUpload.map(file => compressImage(file))
+      )
 
-      // Compress newly added images and wait for completion
-      if (addedImages.length > 0) {
-        const compressedAdded = await Promise.all(
-          addedImages.map(file => compressImage(file))
-        )
+      compressedImages.forEach(compressedImage => {
+        formDataToSend.append('images', compressedImage)
+      })
 
-        // Append all compressed added images
-        compressedAdded.forEach(compressedImage => {
-          formDataToSend.append('addedImages', compressedImage)
-        })
-      }
-
-      // Send indices of removed existing images
-      if (removedImageIndices.size > 0) {
-        formDataToSend.append('removedImageIndices', JSON.stringify(Array.from(removedImageIndices)))
-      }
-
+      formDataToSend.append('imageOrder', JSON.stringify(imageOrder))
       formDataToSend.append('title', formData.title)
       formDataToSend.append('description', formData.description)
       formDataToSend.append('slug', formData.slug)
@@ -238,16 +239,15 @@ export default function ProjectManager() {
       description: project.description || '',
       slug: project.slug || '',
       categoryIds: project.project_categories?.map(pc => pc.category.id) || [],
-      images: [],
       type: (project.type as 'portfolio' | 'scratch') || 'portfolio',
       published: project.published ?? true,
     })
     setCoverImagePreview(project.cover_image_path || null)
-    setExistingImages(project.batch_image_path)
-    setImagePreviews(project.batch_image_path)
-    setRemovedImageIndices(new Set())
-    setModifiedImages(new Map())
-    setAddedImages([])
+    setImagesList(project.batch_image_path.map((url, i) => ({
+      id: `existing-${i}-${url}`,
+      type: 'existing',
+      url
+    })))
     setShowCreateForm(true)
   }
 
@@ -258,16 +258,11 @@ export default function ProjectManager() {
       description: '',
       slug: '',
       categoryIds: [],
-      images: [],
       type: 'portfolio',
       published: true,
     })
     setCoverImagePreview(null)
-    setImagePreviews([])
-    setExistingImages([])
-    setRemovedImageIndices(new Set())
-    setModifiedImages(new Map())
-    setAddedImages([])
+    setImagesList([])
     setShowCreateForm(false)
     setEditingId(null)
   }
@@ -302,40 +297,32 @@ export default function ProjectManager() {
 
     if (typeof index === 'number') {
       const file = files[0]
-      const newPreviews = [...imagePreviews]
-      const newModifiedImages = new Map(modifiedImages)
-
-      newModifiedImages.set(index, file)
-      setModifiedImages(newModifiedImages)
-
       const reader = new FileReader()
       reader.onload = (e) => {
-        newPreviews[index] = e.target?.result as string
-        setImagePreviews(newPreviews)
+        setImagesList(prev => prev.map((item, i) => i === index ? {
+          ...item,
+          type: 'new',
+          url: e.target?.result as string,
+          file
+        } : item))
       }
       reader.readAsDataURL(file)
     } else {
-      const currentPreviewCount = imagePreviews.length
-      const newPreviews = [...imagePreviews]
-
-      if (editingId) {
-        const newAddedImages = [...addedImages, ...files]
-        setAddedImages(newAddedImages)
-      } else {
-        const newImages = [...formData.images, ...files]
-        setFormData({ ...formData, images: newImages })
-      }
-
       let loadedCount = 0
+      const newItems: ImageItem[] = []
       files.forEach((file, fileIndex) => {
         const reader = new FileReader()
         reader.onload = (e) => {
-          newPreviews[currentPreviewCount + fileIndex] = e.target?.result as string
+          newItems[fileIndex] = {
+            id: `new-${Date.now()}-${fileIndex}-${file.name}`,
+            type: 'new',
+            url: e.target?.result as string,
+            file
+          }
           loadedCount++
 
-          // Update state when all files are loaded
           if (loadedCount === files.length) {
-            setImagePreviews(newPreviews)
+            setImagesList(prev => [...prev, ...newItems])
           }
         }
         reader.readAsDataURL(file)
@@ -344,30 +331,28 @@ export default function ProjectManager() {
   }
 
   const removeImage = (indexToRemove: number) => {
-    if (editingId) {
-      if (indexToRemove < existingImages.length) {
-        const newRemovedIndices = new Set(removedImageIndices)
-        newRemovedIndices.add(indexToRemove)
-        setRemovedImageIndices(newRemovedIndices)
+    setImagesList(prev => prev.filter((_, index) => index !== indexToRemove))
+  }
 
-        const newModifiedImages = new Map(modifiedImages)
-        newModifiedImages.delete(indexToRemove)
-        setModifiedImages(newModifiedImages)
-      } else {
-        const addedImageIndex = indexToRemove - existingImages.length
-        const newAddedImages = addedImages.filter((_, index) => index !== addedImageIndex)
-        setAddedImages(newAddedImages)
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index)
+    e.dataTransfer.effectAllowed = 'move'
+  }
 
-        const newPreviews = imagePreviews.filter((_, index) => index !== indexToRemove)
-        setImagePreviews(newPreviews)
-      }
-    } else {
-      const newImages = formData.images.filter((_, index) => index !== indexToRemove)
-      const newPreviews = imagePreviews.filter((_, index) => index !== indexToRemove)
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (draggedIndex === null || draggedIndex === index) return
 
-      setFormData({ ...formData, images: newImages })
-      setImagePreviews(newPreviews)
-    }
+    const newList = [...imagesList]
+    const draggedItem = newList[draggedIndex]
+    newList.splice(draggedIndex, 1)
+    newList.splice(index, 0, draggedItem)
+    setDraggedIndex(index)
+    setImagesList(newList)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null)
   }
 
   useEffect(() => {
@@ -612,44 +597,50 @@ export default function ProjectManager() {
                 </div>
 
                 {/* Image Previews */}
-                {imagePreviews.length > 0 && (
+                {imagesList.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {imagePreviews
-                      .map((preview, index) => ({ preview, index }))
-                      .filter(({ index }) => !removedImageIndices.has(index))
-                      .map(({ preview, index }) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={preview}
-                            alt={`Image ${index + 1}`}
-                            className="w-full aspect-square object-cover rounded-lg border border-gray-200"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => document.getElementById(`image-${index}`)?.click()}
-                            className="absolute bottom-1 right-1 bg-blue-500 text-white rounded-full px-2 py-1 text-xs hover:bg-blue-600 transition-colors shadow-lg"
-                          >
-                            Change
-                          </button>
-                          <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
-                            {index + 1}
-                          </div>
-                          <input
-                            id={`image-${index}`}
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleImageChange(e, index)}
-                            className="hidden"
-                          />
+                    {imagesList.map((item, index) => (
+                      <div
+                        key={item.id}
+                        draggable={!submitting}
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDragEnd={handleDragEnd}
+                        className={`relative group border border-gray-200 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing transition-all ${
+                          draggedIndex === index ? 'opacity-40 scale-95 border-blue-500 border-2' : 'opacity-100 hover:shadow-md'
+                        }`}
+                      >
+                        <img
+                          src={item.url}
+                          alt={`Image ${index + 1}`}
+                          className="w-full aspect-square object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById(`image-${index}`)?.click()}
+                          className="absolute bottom-1 right-1 bg-blue-500 text-white rounded-full px-2 py-1 text-xs hover:bg-blue-600 transition-colors shadow-lg"
+                        >
+                          Change
+                        </button>
+                        <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                          {index + 1}
                         </div>
-                      ))}
+                        <input
+                          id={`image-${index}`}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleImageChange(e, index)}
+                          className="hidden"
+                        />
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -695,7 +686,7 @@ export default function ProjectManager() {
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   onClick={() => editingId ? updateProject(editingId) : createProject()}
-                  disabled={submitting || !formData.title.trim() || (!editingId && formData.images.length === 0 && imagePreviews.length === 0)}
+                  disabled={submitting || !formData.title.trim() || imagesList.length === 0}
                   className="w-full sm:w-auto"
                 >
                   {submitting ? (
