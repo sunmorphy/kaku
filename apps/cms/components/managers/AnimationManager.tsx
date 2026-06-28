@@ -335,6 +335,35 @@ export default function AnimationManager() {
     setDraggedIndex(null)
   }
 
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    setDraggedIndex(index)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent, currentIndex: number) => {
+    if (draggedIndex === null) return
+    const touch = e.touches[0]
+    const element = document.elementFromPoint(touch.clientX, touch.clientY)
+    if (!element) return
+
+    const card = element.closest('[data-index]')
+    if (!card) return
+
+    const targetIndex = parseInt(card.getAttribute('data-index') || '')
+    if (isNaN(targetIndex) || targetIndex === draggedIndex) return
+
+    const newList = [...videosList]
+    const draggedItem = newList[draggedIndex]
+    newList.splice(draggedIndex, 1)
+    newList.splice(targetIndex, 0, draggedItem)
+    
+    setDraggedIndex(targetIndex)
+    setVideosList(newList)
+  }
+
+  const handleTouchEnd = () => {
+    setDraggedIndex(null)
+  }
+
   useEffect(() => {
     setCurrentPage(1)
   }, [searchTerm, selectedCategoryIds])
@@ -584,7 +613,11 @@ export default function AnimationManager() {
                         onDragStart={(e) => handleDragStart(e, index)}
                         onDragOver={(e) => handleDragOver(e, index)}
                         onDragEnd={handleDragEnd}
-                        className={`relative group border border-gray-200 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing transition-all ${
+                        onTouchStart={(e) => handleTouchStart(e, index)}
+                        onTouchMove={(e) => handleTouchMove(e, index)}
+                        onTouchEnd={handleTouchEnd}
+                        data-index={index}
+                        className={`relative group border border-gray-200 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing transition-all select-none touch-none ${
                           draggedIndex === index ? 'opacity-40 scale-95 border-blue-500 border-2' : 'opacity-100 hover:shadow-md'
                         }`}
                       >
@@ -603,18 +636,22 @@ export default function AnimationManager() {
                         <button
                           type="button"
                           onClick={() => removeVideo(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg z-10"
                         >
                           <X className="w-3 h-3" />
                         </button>
                         <button
                           type="button"
                           onClick={() => document.getElementById(`video-${index}`)?.click()}
-                          className="absolute bottom-1 right-1 bg-blue-500 text-white rounded-full px-2 py-1 text-xs hover:bg-blue-600 transition-colors shadow-lg"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          className="absolute bottom-1 right-1 bg-blue-500 text-white rounded-full px-2 py-1 text-xs hover:bg-blue-600 transition-colors shadow-lg z-10"
                         >
                           Change
                         </button>
-                        <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                        <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded z-10">
                           {index + 1}
                         </div>
                         <input
