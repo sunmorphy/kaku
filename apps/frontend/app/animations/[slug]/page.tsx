@@ -128,7 +128,7 @@ export default function AnimationDetail({ params }: Props) {
                     {animation.batch_video_path.map((videoPath, index) => (
                         <div key={index} className="w-full rounded-lg overflow-hidden bg-gray-100 shadow-lg">
                             <video
-                                src={videoPath}
+                                src={animation.cover_image_path ? videoPath : `${videoPath}#t=0.001`}
                                 controls
                                 playsInline
                                 poster={animation.cover_image_path || undefined}

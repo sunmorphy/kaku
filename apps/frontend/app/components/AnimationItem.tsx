@@ -79,7 +79,7 @@ export default function AnimationItem({ id, title, description, categories, vide
                         />
                     ) : (
                         <motion.video
-                            src={previewVideo}
+                            src={previewVideo ? `${previewVideo}#t=0.001` : undefined}
                             className="absolute inset-0 w-full h-full object-cover"
                             variants={videoVariants}
                             preload="metadata"
