@@ -99,9 +99,9 @@ export default function Portfolio() {
     <>
       <Head>
         <title>Portfolio | Kaku</title>
-        <meta name="description" content="Browse Kaku's creative portfolio featuring projects and artworks." />
+        <meta name="description" content="Browse Kaku's creative portfolio featuring projects." />
         <meta property="og:title" content="Kaku's Portfolio" />
-        <meta property="og:description" content="Browse Kaku's creative portfolio featuring projects and artworks." />
+        <meta property="og:description" content="Browse Kaku's creative portfolio featuring projects." />
       </Head>
       <div className="min-h-screen p-8 animate-fade-in">
         <div className="mx-auto max-w-7xl w-full">
@@ -113,7 +113,7 @@ export default function Portfolio() {
             <div className="mb-6">
               <input
                 type="text"
-                placeholder="Search by project or artwork name..."
+                placeholder="Search by project name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
