@@ -616,6 +616,18 @@ export default function AnimationManager() {
                         onTouchStart={(e) => handleTouchStart(e, index)}
                         onTouchMove={(e) => handleTouchMove(e, index)}
                         onTouchEnd={handleTouchEnd}
+                        onContextMenu={(e) => e.preventDefault()}
+                        onMouseEnter={(e) => {
+                          const video = e.currentTarget.querySelector('video')
+                          if (video) video.play().catch(() => {})
+                        }}
+                        onMouseLeave={(e) => {
+                          const video = e.currentTarget.querySelector('video')
+                          if (video) {
+                            video.pause()
+                            video.currentTime = 0
+                          }
+                        }}
                         data-index={index}
                         className={`relative group border border-gray-200 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing transition-all select-none touch-none ${
                           draggedIndex === index ? 'opacity-40 scale-95 border-blue-500 border-2' : 'opacity-100 hover:shadow-md'
@@ -623,15 +635,11 @@ export default function AnimationManager() {
                       >
                         <video
                           src={item.url}
-                          className="w-full aspect-square object-cover"
+                          className="w-full aspect-square object-cover pointer-events-none select-none"
                           controls={false}
                           muted
                           loop
-                          onMouseEnter={(e) => e.currentTarget.play()}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.pause()
-                            e.currentTarget.currentTime = 0
-                          }}
+                          draggable={false}
                         />
                         <button
                           type="button"

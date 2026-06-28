@@ -638,6 +638,7 @@ export default function ProjectManager() {
                         onTouchStart={(e) => handleTouchStart(e, index)}
                         onTouchMove={(e) => handleTouchMove(e, index)}
                         onTouchEnd={handleTouchEnd}
+                        onContextMenu={(e) => e.preventDefault()}
                         data-index={index}
                         className={`relative group border border-gray-200 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing transition-all select-none touch-none ${
                           draggedIndex === index ? 'opacity-40 scale-95 border-blue-500 border-2' : 'opacity-100 hover:shadow-md'
@@ -646,7 +647,8 @@ export default function ProjectManager() {
                         <img
                           src={item.url}
                           alt={`Image ${index + 1}`}
-                          className="w-full aspect-square object-cover"
+                          className="w-full aspect-square object-cover pointer-events-none select-none"
+                          draggable={false}
                         />
                         <button
                           type="button"
