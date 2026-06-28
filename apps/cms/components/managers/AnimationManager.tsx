@@ -105,13 +105,15 @@ export default function AnimationManager() {
   }
 
   const createAnimation = async () => {
-    if (!formData.coverImage || !formData.title.trim() || formData.videos.length === 0) return
+    if (!formData.title.trim() || formData.videos.length === 0) return
 
     setSubmitting(true)
     try {
       const formDataToSend = new FormData()
-      const compressedCoverImage = await compressImage(formData.coverImage)
-      formDataToSend.append('coverImage', compressedCoverImage)
+      if (formData.coverImage) {
+        const compressedCoverImage = await compressImage(formData.coverImage)
+        formDataToSend.append('coverImage', compressedCoverImage)
+      }
 
       // Compress all videos and wait for completion
       const compressedVideos = await Promise.all(
@@ -235,6 +237,7 @@ export default function AnimationManager() {
       videos: [],
       published: animation.published ?? true,
     })
+    setCoverImagePreview(animation.cover_image_path || null)
     setExistingVideos(animation.batch_video_path)
     setVideoPreviews(animation.batch_video_path)
     setRemovedVideoIndices(new Set())
@@ -253,6 +256,7 @@ export default function AnimationManager() {
       videos: [],
       published: true,
     })
+    setCoverImagePreview(null)
     setVideoPreviews([])
     setExistingVideos([])
     setRemovedVideoIndices(new Set())
@@ -466,7 +470,7 @@ export default function AnimationManager() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Cover Image {!editingId && <span className="text-red-500">*</span>}
+                  Cover Image
                 </label>
                 <div className="relative">
                   {coverImagePreview ? (

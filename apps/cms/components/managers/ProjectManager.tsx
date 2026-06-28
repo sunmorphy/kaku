@@ -107,13 +107,15 @@ export default function ProjectManager() {
   }
 
   const createProject = async () => {
-    if (!formData.coverImage || !formData.title.trim() || formData.images.length === 0) return
+    if (!formData.title.trim() || formData.images.length === 0) return
 
     setSubmitting(true)
     try {
       const formDataToSend = new FormData()
-      const compressedCoverImage = await compressImage(formData.coverImage)
-      formDataToSend.append('coverImage', compressedCoverImage)
+      if (formData.coverImage) {
+        const compressedCoverImage = await compressImage(formData.coverImage)
+        formDataToSend.append('coverImage', compressedCoverImage)
+      }
 
       // Compress all images and wait for completion
       const compressedImages = await Promise.all(
@@ -240,6 +242,7 @@ export default function ProjectManager() {
       type: (project.type as 'portfolio' | 'scratch') || 'portfolio',
       published: project.published ?? true,
     })
+    setCoverImagePreview(project.cover_image_path || null)
     setExistingImages(project.batch_image_path)
     setImagePreviews(project.batch_image_path)
     setRemovedImageIndices(new Set())
@@ -259,6 +262,7 @@ export default function ProjectManager() {
       type: 'portfolio',
       published: true,
     })
+    setCoverImagePreview(null)
     setImagePreviews([])
     setExistingImages([])
     setRemovedImageIndices(new Set())
@@ -486,7 +490,7 @@ export default function ProjectManager() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Cover Image {!editingId && <span className="text-red-500">*</span>}
+                  Cover Image
                 </label>
                 <div className="relative">
                   {coverImagePreview ? (

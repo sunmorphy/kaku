@@ -17,11 +17,11 @@ export function AnimationCard({ animation, onEdit, onDelete }: AnimationCardProp
                     {animation.batch_video_path.length} video{animation.batch_video_path.length > 1 ? 's' : ''}
                 </div>
                 <img
-                    src={animation.cover_image_path ? animation.cover_image_path : '/placeholder-image.svg'}
+                    src={animation.cover_image_path ? animation.cover_image_path : '/no-cover.svg'}
                     alt={animation.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                        e.currentTarget.src = '/placeholder-image.svg'
+                        e.currentTarget.src = '/no-cover.svg'
                     }}
                 />
             </div>

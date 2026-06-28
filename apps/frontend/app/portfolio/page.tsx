@@ -16,6 +16,7 @@ interface PortfolioItemData {
   image: string;
   images?: string[];
   slug?: string | null;
+  cover_image_path?: string | null;
 }
 
 export default function Portfolio() {
@@ -40,9 +41,10 @@ export default function Portfolio() {
             description: project.description,
             categories: project.project_categories?.map(cat => cat.category.name) || ['Uncategorized'],
             type: 'project' as const,
-            image: project.cover_image_path || '',
+            image: project.batch_image_path?.[0] || '',
             images: project.batch_image_path || [],
-            slug: project.slug
+            slug: project.slug,
+            cover_image_path: project.cover_image_path
           }))
         ];
 
@@ -148,6 +150,7 @@ export default function Portfolio() {
                 image={item.image}
                 images={item.images}
                 slug={item.slug}
+                cover_image_path={item.cover_image_path}
               />
             ))}
           </div>

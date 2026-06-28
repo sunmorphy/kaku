@@ -11,9 +11,10 @@ interface PortfolioItemProps {
   image: string;
   images?: string[];
   slug?: string | null;
+  cover_image_path?: string | null;
 }
 
-export default function PortfolioItem({ id, title, description, categories, type, image, images, slug }: PortfolioItemProps) {
+export default function PortfolioItem({ id, title, description, categories, type, image, images, slug, cover_image_path }: PortfolioItemProps) {
   const isProject = type === 'project';
   const totalImages = images?.length || 1;
 
@@ -84,14 +85,58 @@ export default function PortfolioItem({ id, title, description, categories, type
         }}
       >
         <motion.div className="relative w-full h-96 overflow-hidden rounded-2xl bg-gray-100 border-2 border-transparent">
-          <motion.img
-            src={image}
-            alt={title}
-            className="absolute inset-0 w-full h-full object-cover"
-            variants={imageVariants}
-          />
+          {cover_image_path ? (
+            <motion.img
+              src={cover_image_path}
+              alt={title}
+              className="absolute inset-0 w-full h-full object-cover"
+              variants={imageVariants}
+            />
+          ) : images && images.length > 0 ? (
+            images.length === 1 ? (
+              <motion.img
+                src={images[0]}
+                alt={title}
+                className="absolute inset-0 w-full h-full object-cover"
+                variants={imageVariants}
+              />
+            ) : (
+              <div className="grid grid-cols-2 h-full w-full gap-[2px]">
+                <div className="relative h-full w-full overflow-hidden">
+                  <motion.img
+                    src={images[0]}
+                    alt={`${title} - 1`}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    variants={imageVariants}
+                  />
+                </div>
+                <div className="relative h-full w-full overflow-hidden">
+                  <motion.img
+                    src={images[1]}
+                    alt={`${title} - 2`}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    variants={imageVariants}
+                  />
+                  {images.length > 2 && (
+                    <div className="absolute inset-0 bg-black/55 flex items-center justify-center backdrop-blur-[2px]">
+                      <span className="text-white text-3xl font-bold drop-shadow-md">
+                        +{images.length - 2}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          ) : (
+            <motion.img
+              src={image}
+              alt={title}
+              className="absolute inset-0 w-full h-full object-cover"
+              variants={imageVariants}
+            />
+          )}
           <motion.div
-            className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/5 to-transparent rounded-2xl"
+            className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent rounded-2xl pointer-events-none"
             variants={overlayVariants}
           />
 

@@ -1,7 +1,5 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useRef } from 'react';
-import { devLog } from '../utils/utils';
 
 interface AnimationItemProps {
     id: string;
@@ -16,23 +14,6 @@ interface AnimationItemProps {
 export default function AnimationItem({ id, title, description, categories, videos, slug, cover_image_path }: AnimationItemProps) {
     const totalVideos = videos.length;
     const previewVideo = videos[0];
-    const videoRef = useRef<HTMLVideoElement>(null);
-
-    const handleMouseEnter = () => {
-        if (videoRef.current) {
-            videoRef.current.play().catch(err => {
-                // Ignore autoplay errors
-                devLog('Video play failed:', err);
-            });
-        }
-    };
-
-    const handleMouseLeave = () => {
-        if (videoRef.current) {
-            videoRef.current.pause();
-            videoRef.current.currentTime = 0; // Reset to start
-        }
-    };
 
     const cardVariants = {
         initial: {
@@ -86,21 +67,26 @@ export default function AnimationItem({ id, title, description, categories, vide
                     stiffness: 300,
                     damping: 20
                 }}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
             >
                 {/* Video Preview */}
                 <motion.div className="relative w-full h-96 overflow-hidden rounded-2xl bg-gray-100 border-2 border-transparent">
-                    <motion.video
-                        ref={videoRef}
-                        src={previewVideo}
-                        poster={cover_image_path || undefined}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        variants={videoVariants}
-                        loop
-                        muted
-                        playsInline
-                    />
+                    {cover_image_path ? (
+                        <motion.img
+                            src={cover_image_path}
+                            alt={title}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            variants={videoVariants}
+                        />
+                    ) : (
+                        <motion.video
+                            src={previewVideo}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            variants={videoVariants}
+                            preload="metadata"
+                            muted
+                            playsInline
+                        />
+                    )}
 
                     {/* Video count badge */}
                     {totalVideos > 1 && (

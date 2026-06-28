@@ -17,11 +17,11 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
                     {project.batch_image_path.length} image{project.batch_image_path.length > 1 ? 's' : ''}
                 </div>
                 <img
-                    src={project.cover_image_path ? project.cover_image_path : '/placeholder-image.svg'}
+                    src={project.cover_image_path ? project.cover_image_path : '/no-cover.svg'}
                     alt={project.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                        e.currentTarget.src = '/placeholder-image.svg'
+                        e.currentTarget.src = '/no-cover.svg'
                     }}
                 />
             </div>
