@@ -1,83 +1,42 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getProject, getArtwork, type Project, type Artwork } from '../../lib/api';
-import LoadingAnimation from '../../components/LoadingAnimation';
-import { devLog } from '@/app/utils/utils';
+import { getProject } from '../../lib/api';
+import type { Metadata } from 'next';
 
 interface Props {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ type?: string }>;
 }
 
-export default function PortfolioDetail({ params, searchParams }: Props) {
-  const [item, setItem] = useState<(Project & { type: 'project' }) | (Artwork & { type: 'artwork' }) | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [resolvedParams, setResolvedParams] = useState<{ slug: string } | null>(null);
-  const [resolvedSearchParams, setResolvedSearchParams] = useState<{ type?: string } | null>(null);
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const resolvedParams = await params;
+  const slug = resolvedParams.slug;
 
-  useEffect(() => {
-    async function resolveParams() {
-      const resolved = await params;
-      const resolvedSearch = await searchParams;
-      setResolvedParams(resolved);
-      setResolvedSearchParams(resolvedSearch || {});
-    }
-    resolveParams();
-  }, [params, searchParams]);
-
-  useEffect(() => {
-    if (!resolvedParams || !resolvedSearchParams) return;
-
-    async function fetchData() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        if (resolvedParams == null || resolvedSearchParams == null) {
-          return;
-        }
-
-        const slug = resolvedParams.slug;
-        const type = resolvedSearchParams.type;
-
-        if (type === 'project') {
-          const project = await getProject(slug);
-          if (project) {
-            setItem({ ...project, type: 'project' });
-            return;
-          }
-        } else if (type === 'artwork') {
-          const artwork = await getArtwork(slug);
-          if (artwork) {
-            setItem({ ...artwork, type: 'artwork' });
-            return;
-          }
-        }
-
-        // Not found
-        setError('Item not found');
-      } catch (err) {
-        setError('Failed to load item details');
-        devLog('Error fetching item details:', err);
-      } finally {
-        setLoading(false);
+  const project = await getProject(slug);
+  if (project) {
+    return {
+      title: `${project.title} | Rahma Dwin`,
+      description: project.description || `View ${project.title} on Rahma Dwin's portfolio.`,
+      openGraph: {
+        title: `${project.title} | Rahma Dwin`,
+        description: project.description || `View ${project.title} on Rahma Dwin's portfolio.`,
+        images: project.cover_image_path || (project.batch_image_path?.[0]) || '',
       }
-    }
-
-    fetchData();
-  }, [resolvedParams, resolvedSearchParams]);
-
-  if (loading) {
-    return (
-      <LoadingAnimation size={256} />
-    );
+    };
   }
 
-  if (error || !item) {
+  return {
+    title: 'Project Details | Rahma Dwin',
+    description: "Rahma Dwin's portfolio."
+  };
+}
+
+export default async function PortfolioDetail({ params }: Props) {
+  const resolvedParams = await params;
+  const slug = resolvedParams.slug;
+
+  const project = await getProject(slug);
+
+  if (!project) {
     notFound();
   }
 
@@ -98,44 +57,34 @@ export default function PortfolioDetail({ params, searchParams }: Props) {
           <div>
             <div className="flex justify-between items-start mb-4">
               <div className='flex flex-col space-y-4'>
-                <h1 className="text-4xl font-bold">{item.title}</h1>
-                {item.description && (
+                <h1 className="text-4xl font-bold">{project.title}</h1>
+                {project.description && (
                   <div>
-                    <p className="text-gray-700 leading-relaxed">{item.description}</p>
+                    <p className="text-gray-700 leading-relaxed">{project.description}</p>
                   </div>
                 )}
 
                 <div className="flex flex-wrap gap-2">
-                  {item.type === 'project'
-                    ? (item as Project & { type: 'project' }).project_categories?.map((cat, index) => (
-                      <span
-                        key={`project-cat-${cat.category.id || index}`}
-                        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
-                      >
-                        {cat.category.name}
-                      </span>
-                    ))
-                    : (item as Artwork & { type: 'artwork' }).artwork_categories?.map((cat, index) => (
-                      <span
-                        key={`artwork-cat-${cat.category.id || index}`}
-                        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
-                      >
-                        {cat.category.name}
-                      </span>
-                    ))
-                  }
+                  {project.project_categories?.map((cat, index) => (
+                    <span
+                      key={`project-cat-${cat.category.id || index}`}
+                      className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                    >
+                      {cat.category.name}
+                    </span>
+                  ))}
                 </div>
               </div>
               <div className='flex flex-col items-end'>
                 <div className="flex flex-wrap gap-4 text-gray-600 mb-4">
-                  <span>{new Date(item.updated_at).toLocaleDateString('en-US', {
+                  <span>{new Date(project.updated_at).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
                   })}</span>
                 </div>
                 <span className="text-sm px-3 py-1 bg-primary text-white rounded-full">
-                  {item.type}
+                  project
                 </span>
               </div>
             </div>
@@ -144,38 +93,26 @@ export default function PortfolioDetail({ params, searchParams }: Props) {
 
         {/* Images */}
         <div className="space-y-8 mt-24">
-          {item.type === 'project' ? (
-            <>
-              {/* Cover Image */}
-              {item.cover_image_path && (
-                <div className="w-full rounded-lg overflow-hidden bg-gray-100">
-                  <img
-                    src={item.cover_image_path}
-                    alt={`${item.title} - Cover`}
-                    className="w-full h-auto object-contain"
-                  />
-                </div>
-              )}
-              {/* Project Images */}
-              {(item as Project & { type: 'project' }).batch_image_path?.map((imagePath, index) => (
-                <div key={index} className="w-full rounded-lg overflow-hidden bg-gray-100">
-                  <img
-                    src={imagePath}
-                    alt={`${item.title} - Image ${index + 1}`}
-                    className="w-full h-auto object-contain"
-                  />
-                </div>
-              ))}
-            </>
-          ) : (
+          {/* Cover Image */}
+          {project.cover_image_path && (
             <div className="w-full rounded-lg overflow-hidden bg-gray-100">
               <img
-                src={(item as Artwork & { type: 'artwork' }).image_path}
-                alt={item.title}
+                src={project.cover_image_path}
+                alt={`${project.title} - Cover`}
                 className="w-full h-auto object-contain"
               />
             </div>
           )}
+          {/* Project Images */}
+          {project.batch_image_path?.map((imagePath, index) => (
+            <div key={index} className="w-full rounded-lg overflow-hidden bg-gray-100">
+              <img
+                src={imagePath}
+                alt={`${project.title} - Image ${index + 1}`}
+                className="w-full h-auto object-contain"
+              />
+            </div>
+          ))}
         </div>
       </div>
     </div>

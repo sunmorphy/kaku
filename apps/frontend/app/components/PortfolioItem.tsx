@@ -71,7 +71,7 @@ export default function PortfolioItem({ id, title, description, categories, type
   };
 
   return (
-    <Link key={id} href={`/portfolio/${slug}?type=${type}`}>
+    <Link key={id} href={`/portfolio/${slug}`}>
       <motion.div
         className="cursor-pointer bg-white rounded-3xl border border-gray-100 p-3 flex flex-col h-[440px]"
         variants={cardVariants}

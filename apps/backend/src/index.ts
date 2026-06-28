@@ -16,6 +16,18 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(cors());
 
+// Global Robots NoIndex Middleware (blocks indexing of any API responses)
+app.use((_req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  next();
+});
+
+// Robots.txt configuration
+app.get('/robots.txt', (_req, res) => {
+  res.type('text/plain');
+  res.send('User-agent: *\nDisallow: /');
+});
+
 app.use('/api/auth', express.json({ limit: '25mb' }));
 app.use('/api/auth', express.urlencoded({ extended: true, limit: '25mb' }));
 app.use('/api/categories', express.json({ limit: '25mb' }));
