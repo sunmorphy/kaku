@@ -194,83 +194,59 @@ export default function Artwork() {
       {/* Image Preview Dialog */}
       {isDialogOpen && selectedImageIndex !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={closeDialog}>
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-white-500/10 to-white-500/20" />
-          <div className="absolute inset-0 backdrop-blur-3xl bg-black/30" />
+          {/* Dark Backdrop */}
+          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" />
 
-          <div className="relative z-10 w-full h-full flex items-center justify-center p-4 md:p-8" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={closeDialog}
-              className="absolute top-4 right-4 md:top-8 md:right-8 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full p-3 transition-all shadow-lg border border-white/20"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+          {/* Dialog Container */}
+          <div
+            className="relative z-10 w-full h-full flex flex-col md:flex-row overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Left Column: Image Viewer / Stack Grid */}
+            <div className="flex-1 h-[60vh] md:h-full flex flex-col items-center justify-center relative p-4 md:p-8">
+              {/* Navigation Buttons (Only overlays the left image section) */}
+              {filteredItems.length > 1 && (
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigateImage('prev'); }}
+                    className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-full p-3 transition-all shadow-md border border-white/10"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigateImage('next'); }}
+                    className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-full p-3 transition-all shadow-md border border-white/10"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </>
+              )}
 
-            {/* Navigation Buttons */}
-            {filteredItems.length > 1 && (
-              <>
-                <button
-                  onClick={(e) => { e.stopPropagation(); navigateImage('prev'); }}
-                  className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full p-3 transition-all shadow-lg border border-white/20"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); navigateImage('next'); }}
-                  className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full p-3 transition-all shadow-lg border border-white/20"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </>
-            )}
-
-            {/* Main Content */}
-            <div className="w-full max-w-6xl h-full flex flex-col items-center justify-center">
+              {/* Main Left Content */}
               {filteredItems[selectedImageIndex].type === 'artwork' ? (
-                <div className="flex flex-col items-center w-full h-full justify-center space-y-6">
-                  <div className="flex-1 flex items-center justify-center w-full max-h-[70vh]">
-                    {filteredItems[selectedImageIndex].image && (
-                      <Image
-                        src={filteredItems[selectedImageIndex].image}
-                        alt={filteredItems[selectedImageIndex].title}
-                        width={1200}
-                        height={800}
-                        className="object-contain max-h-full w-auto rounded-lg shadow-2xl"
-                      />
-                    )}
-                  </div>
-
-                  <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 max-w-2xl border border-white/20">
-                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                      {filteredItems[selectedImageIndex].title}
-                    </h2>
-                    {filteredItems[selectedImageIndex].description && (
-                      <p className="text-white/90 text-base md:text-lg leading-relaxed">
-                        {filteredItems[selectedImageIndex].description}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {filteredItems[selectedImageIndex].categories.map((category, index) => (
-                        <span key={index} className="px-3 py-1 bg-white/20 text-white rounded-full text-sm font-medium border border-white/30">
-                          {category}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                <div className="w-full h-full flex items-center justify-center max-h-[85vh]">
+                  {filteredItems[selectedImageIndex].image && (
+                    <Image
+                      src={filteredItems[selectedImageIndex].image}
+                      alt={filteredItems[selectedImageIndex].title}
+                      width={1200}
+                      height={800}
+                      className="object-contain max-h-full w-auto rounded-lg shadow-2xl border border-white/10"
+                    />
+                  )}
                 </div>
               ) : (
                 !isGridExpanded ? (
-                  <div className="flex flex-col items-center w-full h-full justify-center space-y-6">
+                  <div className="flex flex-col items-center justify-center space-y-6">
                     <div
                       className="relative cursor-pointer group"
                       onClick={toggleGridView}
                     >
-                      <div className="relative w-[300px] h-[300px] md:w-[400px] md:h-[400px]">
+                      <div className="relative w-[260px] h-[260px] md:w-[380px] md:h-[380px]">
                         {filteredItems[selectedImageIndex].images?.slice(0, 3).map((img, index) => (
                           <div
                             key={index}
@@ -289,14 +265,14 @@ export default function Artwork() {
                         ))}
 
                         {filteredItems[selectedImageIndex].images && filteredItems[selectedImageIndex].images!.length > 3 && (
-                          <div className="absolute -bottom-4 -right-4 bg-primary text-white rounded-full w-16 h-16 flex items-center justify-center text-xl font-bold shadow-lg border-4 border-white z-10">
+                          <div className="absolute -bottom-4 -right-4 bg-primary text-white rounded-full w-14 h-14 flex items-center justify-center text-lg font-bold shadow-lg border-4 border-white z-10">
                             +{filteredItems[selectedImageIndex].images!.length - 3}
                           </div>
                         )}
                       </div>
 
-                      <div className="mt-8 bg-white/10 backdrop-blur-md rounded-full px-6 py-3 border border-white/20 group-hover:bg-white/20 transition-all">
-                        <p className="text-white font-semibold flex items-center gap-2">
+                      <div className="mt-8 bg-white/10 hover:bg-white/20 transition-all backdrop-blur-sm rounded-full px-6 py-3 border border-white/10 text-center">
+                        <p className="text-white text-sm font-semibold flex items-center justify-center gap-2">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                           </svg>
@@ -304,64 +280,28 @@ export default function Artwork() {
                         </p>
                       </div>
                     </div>
-
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 max-w-2xl border border-white/20">
-                      <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                        {filteredItems[selectedImageIndex].title}
-                      </h2>
-                      {filteredItems[selectedImageIndex].description && (
-                        <p className="text-white/90 text-base md:text-lg leading-relaxed">
-                          {filteredItems[selectedImageIndex].description}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        {filteredItems[selectedImageIndex].categories.map((category, index) => (
-                          <span key={index} className="px-3 py-1 bg-white/20 text-white rounded-full text-sm font-medium border border-white/30">
-                            {category}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
                   </div>
                 ) : (
-                  <div className="w-full h-full flex flex-col">
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 mb-4 border border-white/20 flex-shrink-0">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
-                            {filteredItems[selectedImageIndex].title}
-                          </h2>
-                          {filteredItems[selectedImageIndex].description && (
-                            <p className="text-white/90 text-sm md:text-base leading-relaxed">
-                              {filteredItems[selectedImageIndex].description}
-                            </p>
-                          )}
-                          <div className="flex flex-wrap gap-2 mt-3">
-                            {filteredItems[selectedImageIndex].categories.map((category, index) => (
-                              <span key={index} className="px-3 py-1 bg-white/20 text-white rounded-full text-xs md:text-sm font-medium border border-white/30">
-                                {category}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <button
-                          onClick={toggleGridView}
-                          className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-lg px-4 py-2 transition-all border border-white/20 flex items-center gap-2 flex-shrink-0"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                          <span className="hidden md:inline">Close Grid</span>
-                        </button>
-                      </div>
+                  <div className="w-full h-full flex flex-col p-4">
+                    <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                      <h3 className="text-white font-semibold text-lg">Project Stack Gallery</h3>
+                      <button
+                        onClick={toggleGridView}
+                        className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg px-4 py-2 transition-all border border-white/10 flex items-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        <span>Close Grid</span>
+                      </button>
                     </div>
 
                     <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                      <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
+                      <div className="columns-1 sm:columns-2 gap-4 space-y-4">
                         {filteredItems[selectedImageIndex].images?.map((img, index) => (
                           <div
                             key={index}
-                            className="relative break-inside-avoid rounded-xl overflow-hidden shadow-lg border-2 border-white/20 hover:border-white/40 transition-all group mb-4"
+                            className="relative break-inside-avoid rounded-xl overflow-hidden shadow-lg border border-white/10 hover:border-white/30 transition-all group mb-4"
                           >
                             <img
                               src={img}
@@ -382,11 +322,60 @@ export default function Artwork() {
               )}
             </div>
 
-            {filteredItems.length > 1 && (
-              <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-semibold border border-white/20">
-                {selectedImageIndex + 1} / {filteredItems.length}
+            {/* Right Column: Branded Sidebar Panel */}
+            <div className="w-full md:w-[350px] lg:w-[400px] h-[40vh] md:h-full bg-primary text-white p-6 md:p-8 flex flex-col justify-between overflow-y-auto relative border-t md:border-t-0 md:border-l border-white/10">
+              {/* Close Button inside Sidebar */}
+              <button
+                onClick={closeDialog}
+                className="absolute top-4 right-4 z-30 bg-white/10 hover:bg-white/20 text-white rounded-full p-2.5 transition-all border border-white/20 shadow-md"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <div className="pt-8">
+                {/* Title */}
+                <h2 className="text-2xl md:text-3xl font-bold mb-4 tracking-tight pr-8">
+                  {filteredItems[selectedImageIndex].title}
+                </h2>
+
+                {/* Description */}
+                {filteredItems[selectedImageIndex].description && (
+                  <div className="mb-6 overflow-y-auto max-h-[25vh] md:max-h-[45vh] pr-2 custom-scrollbar">
+                    <p className="text-white/90 text-sm md:text-base leading-relaxed whitespace-pre-wrap">
+                      {filteredItems[selectedImageIndex].description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Categories */}
+                <div className="mb-6">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-2">
+                    Categories
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {filteredItems[selectedImageIndex].categories.map((category, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-white/15 text-white rounded-full text-xs font-medium border border-white/10"
+                      >
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
-            )}
+
+              {/* Sidebar Footer */}
+              <div className="border-t border-white/15 pt-4 flex justify-between items-center text-xs text-white/60 mt-auto">
+                {filteredItems.length > 1 && (
+                  <span>
+                    {selectedImageIndex + 1} / {filteredItems.length}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
