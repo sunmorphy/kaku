@@ -83,104 +83,29 @@ export default function PortfolioItem({ id, title, description, categories, type
           damping: 20
         }}
       >
-        {isProject && images && images.length > 1 ? (
-          <motion.div className="relative w-full h-96 overflow-hidden rounded-2xl bg-gray-100 flex border-2 border-transparent">
-            <motion.div
-              className="relative w-1/2 h-full overflow-hidden"
-              whileHover={{ x: -2 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            >
-              <motion.img
-                src={images[0]}
-                alt={`${title} - Image 1`}
-                className="absolute inset-0 w-full h-full object-cover"
-                variants={imageVariants}
-                transition={{
-                  type: "spring",
-                  stiffness: 100,
-                  damping: 15,
-                  duration: 0.6
-                }}
-              />
-            </motion.div>
-            <motion.div
-              className="relative w-1/2 h-full overflow-hidden"
-              whileHover={{ x: 2 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            >
-              <motion.img
-                src={images[1] || images[0]}
-                alt={`${title} - Image 2`}
-                className="absolute inset-0 w-full h-full object-cover"
-                variants={imageVariants}
-                transition={{
-                  type: "spring",
-                  stiffness: 100,
-                  damping: 15,
-                  duration: 0.6
-                }}
-              />
-              {totalImages > 2 && (
-                <motion.div
-                  className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-sm"
-                  variants={countBadgeVariants}
-                >
-                  <motion.span
-                    className="text-white text-2xl font-bold drop-shadow-lg"
-                    whileHover={{
-                      scale: 1.3,
-                      fontSize: "2rem",
-                      textShadow: "0 0 20px rgba(255,255,255,0.5)"
-                    }}
-                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  >
-                    +{totalImages - 1}
-                  </motion.span>
-                </motion.div>
-              )}
-            </motion.div>
+        <motion.div className="relative w-full h-96 overflow-hidden rounded-2xl bg-gray-100 border-2 border-transparent">
+          <motion.img
+            src={image}
+            alt={title}
+            className="absolute inset-0 w-full h-full object-cover"
+            variants={imageVariants}
+          />
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/5 to-transparent rounded-2xl"
+            variants={overlayVariants}
+          />
 
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/5 to-transparent rounded-2xl"
-              variants={overlayVariants}
-            />
-
-            <motion.div
-              className="absolute inset-0 rounded-2xl border-2 border-primary/20"
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileHover={{
-                opacity: 1,
-                scale: 1,
-                boxShadow: "inset 0 0 20px rgba(var(--color-primary), 0.1)"
-              }}
-              transition={{ duration: 0.3 }}
-            />
-          </motion.div>
-        ) : (
-          <motion.div className="relative w-full h-96 overflow-hidden rounded-2xl bg-gray-100 border-2 border-transparent">
-            <motion.img
-              src={image}
-              alt={title}
-              className="absolute inset-0 w-full h-full object-cover"
-              variants={imageVariants}
-            />
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/5 to-transparent rounded-2xl"
-              variants={overlayVariants}
-            />
-
-            <motion.div
-              className="absolute inset-0 rounded-2xl border-2 border-primary/20"
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileHover={{
-                opacity: 1,
-                scale: 1,
-                boxShadow: "inset 0 0 20px rgba(var(--color-primary), 0.1)"
-              }}
-              transition={{ duration: 0.3 }}
-            />
-          </motion.div>
-        )}
+          <motion.div
+            className="absolute inset-0 rounded-2xl border-2 border-primary/20"
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileHover={{
+              opacity: 1,
+              scale: 1,
+              boxShadow: "inset 0 0 20px rgba(var(--color-primary), 0.1)"
+            }}
+            transition={{ duration: 0.3 }}
+          />
+        </motion.div>
 
         <motion.div
           className="my-8 px-2"
