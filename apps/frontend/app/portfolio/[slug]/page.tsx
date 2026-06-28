@@ -145,15 +145,28 @@ export default function PortfolioDetail({ params, searchParams }: Props) {
         {/* Images */}
         <div className="space-y-8 mt-24">
           {item.type === 'project' ? (
-            (item as Project & { type: 'project' }).batch_image_path?.map((imagePath, index) => (
-              <div key={index} className="w-full rounded-lg overflow-hidden bg-gray-100">
-                <img
-                  src={imagePath}
-                  alt={`${item.title} - Image ${index + 1}`}
-                  className="w-full h-auto object-contain"
-                />
-              </div>
-            ))
+            <>
+              {/* Cover Image */}
+              {item.cover_image_path && (
+                <div className="w-full rounded-lg overflow-hidden bg-gray-100">
+                  <img
+                    src={item.cover_image_path}
+                    alt={`${item.title} - Cover`}
+                    className="w-full h-auto object-contain"
+                  />
+                </div>
+              )}
+              {/* Project Images */}
+              {(item as Project & { type: 'project' }).batch_image_path?.map((imagePath, index) => (
+                <div key={index} className="w-full rounded-lg overflow-hidden bg-gray-100">
+                  <img
+                    src={imagePath}
+                    alt={`${item.title} - Image ${index + 1}`}
+                    className="w-full h-auto object-contain"
+                  />
+                </div>
+              ))}
+            </>
           ) : (
             <div className="w-full rounded-lg overflow-hidden bg-gray-100">
               <img

@@ -112,13 +112,25 @@ export default function AnimationDetail({ params }: Props) {
                     </div>
                 </div>
 
+                {/* Cover Image */}
+                {animation.cover_image_path && (
+                    <div className="w-full rounded-lg overflow-hidden bg-gray-100 mb-8 mt-24">
+                        <img
+                            src={animation.cover_image_path}
+                            alt={`${animation.title} - Cover`}
+                            className="w-full h-auto object-contain"
+                        />
+                    </div>
+                )}
+
                 {/* All Videos */}
-                <div className="space-y-8 mt-24">
+                <div className={`space-y-8 ${animation.cover_image_path ? 'mt-8' : 'mt-24'}`}>
                     {animation.batch_video_path.map((videoPath, index) => (
                         <div key={index} className="w-full rounded-lg overflow-hidden bg-gray-100 shadow-lg">
                             <video
                                 src={videoPath}
                                 controls
+                                poster={animation.cover_image_path || undefined}
                                 className="w-full h-auto"
                                 preload="metadata"
                             >
