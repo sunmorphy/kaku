@@ -5,6 +5,7 @@ import "./globals.css";
 import Header from './components/Header';
 import StructuredData, { websiteSchema, personSchema } from './components/StructuredData';
 import DevToolsProtection from './components/DevToolsProtection';
+import { Analytics } from "@vercel/analytics/react";
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
@@ -50,6 +51,7 @@ export default function RootLayout({
         <DevToolsProtection />
         <Header />
         {children}
+        <Analytics />
       </body>
     </html>
   );
