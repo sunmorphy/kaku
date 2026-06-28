@@ -60,7 +60,7 @@ async function fetchApi(endpoint: string, options?: RequestInit): Promise<any> {
   }
 }
 
-export async function getProjects(userId = 2, page = 1, limit = 25, type?: string): Promise<PaginatedResponse<Project>> {
+export async function getProjects(userId = 1, page = 1, limit = 25, type?: string): Promise<PaginatedResponse<Project>> {
   try {
     let url = `/projects/user/${userId}?page=${page}&limit=${limit}`;
     if (type) {
@@ -94,7 +94,7 @@ export async function getProject(slug: string): Promise<Project | null> {
   }
 }
 
-export async function getArtworks(userId = 2, page = 1, limit = 25, type?: string): Promise<PaginatedResponse<Artwork>> {
+export async function getArtworks(userId = 1, page = 1, limit = 25, type?: string): Promise<PaginatedResponse<Artwork>> {
   try {
     let url = `/artworks/user/${userId}?page=${page}&limit=${limit}`;
     if (type) {
@@ -128,7 +128,7 @@ export async function getArtwork(id: string): Promise<Artwork | null> {
   }
 }
 
-export async function getAnimations(userId = 2, page = 1, limit = 25): Promise<PaginatedResponse<Animation>> {
+export async function getAnimations(userId = 1, page = 1, limit = 25): Promise<PaginatedResponse<Animation>> {
   try {
     const url = `/animations/user/${userId}?page=${page}&limit=${limit}`;
     const data = await fetchApi(url);
@@ -159,7 +159,7 @@ export async function getAnimation(id: string): Promise<Animation | null> {
   }
 }
 
-export async function getProfile(userId = 2): Promise<Profile | null> {
+export async function getProfile(userId = 1): Promise<Profile | null> {
   try {
     const data = await fetchApi(`/auth/profile/${userId}`);
     return data;
@@ -169,7 +169,7 @@ export async function getProfile(userId = 2): Promise<Profile | null> {
   }
 }
 
-export async function getCategories(userId = 2): Promise<Category[]> {
+export async function getCategories(userId = 1): Promise<Category[]> {
   try {
     const data = await fetchApi(`/categories/user/${userId}`);
     return Array.isArray(data) ? data : [];
